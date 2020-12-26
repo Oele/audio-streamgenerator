@@ -39,7 +39,7 @@ sub new {
 sub stream {
     my $self = shift;
 
-    $self->{source} = $self->do_get_new_source();
+    $self->{source} = $self->_do_get_new_source();
     $self->{buffer} = [];
     $self->{skip} = 0;
 
@@ -61,7 +61,7 @@ sub stream {
 
             close( $self->{source} );
             my $old_elapsed_seconds = $self->{elapsed} / $self->{sample_rate};
-            $self->{source} = $self->do_get_new_source();
+            $self->{source} = $self->_do_get_new_source();
 
             print STDERR "old_elapsed_seconds: $old_elapsed_seconds\n";
             if ( $old_elapsed_seconds < ( $self->{normal_fade_seconds} * 2 ) ) {
@@ -101,7 +101,7 @@ sub stream {
 
             my @new_buffer;
             while ( @new_buffer < @{ $self->{buffer} } ) {
-                my $sample = $self->get_sample();
+                my $sample = $self->_get_sample();
                 last if !defined($sample);
                 push( @new_buffer, $sample );
             }
@@ -179,7 +179,7 @@ sub stream {
         }
 
         while ( @{ $self->{buffer} } < ( $self->{normal_fade_seconds} * $self->{sample_rate} ) ) {
-            my $sample = $self->get_sample();
+            my $sample = $self->_get_sample();
             last if !defined($sample);
             push( @{ $self->{buffer} }, $sample );
         }
@@ -207,14 +207,14 @@ sub get_elapsed_seconds {
 }
 
 
-sub send_one_sample {
+sub _send_one_sample {
     my $self   = shift;
     my $sample = shift @{ $self->{buffer} };
     my $fh = $self->{out_fh};
     print $fh map { pack 's*', $_ } @$sample;
 }
 
-sub get_sample {
+sub _get_sample {
     my $self = shift;
     return undef if eof( $self->{source} );
     my $data;
@@ -234,7 +234,7 @@ sub get_sample {
     }
 }
 
-sub do_get_new_source {
+sub _do_get_new_source {
 	my $self = shift;
 	$self->{elapsed}  = 0;
     return $self->{get_new_source}();
