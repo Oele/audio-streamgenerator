@@ -2,7 +2,6 @@ package Audio::StreamGenerator;
 
 use strict;
 use warnings;
-use Data::Dumper;
 use Log::Log4perl qw(:easy);
 
 Log::Log4perl->easy_init($DEBUG);
