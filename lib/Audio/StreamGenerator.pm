@@ -321,7 +321,7 @@ Audio::StreamGenerator - create a 'radio' stream by mixing ('cross fading') mult
 
 This module creates a 'live' audio stream that can be broadcast using streaming technologies like Icecast or HTTP Live Streaming. 
 
-It mixes multiple raw audio streams into one ongoing stream, mixing ('crossfading') them to one ongoing stream. 
+It mixes multiple raw audio streams, mixing ('crossfading') them to one ongoing stream. 
 
 Although there is nothing stopping you from using this to generate a file that can be played back later, its intended use is to create a 'radio' stream that can be streamed or 'broadcast' live on the internet. 
 
@@ -329,7 +329,7 @@ The module takes raw PCM audio from a file handle as input, and outputs raw PCM 
 
 =head1 CONSTRUCTOR METHOD
 
-my $streamer = Audio::StreamGenerator->new( %options );
+    my $streamer = Audio::StreamGenerator->new( %options );
 
 Creates a new StreamGenerator object and returns it. 
 
