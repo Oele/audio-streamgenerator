@@ -5,8 +5,6 @@ use warnings;
 use Data::Dumper;
 use Log::Log4perl qw(:easy);
 
-autoflush STDERR;
-
 Log::Log4perl->easy_init($DEBUG);
 
 my $logger = Log::Log4perl->get_logger('Audio::StreamGenerator');
