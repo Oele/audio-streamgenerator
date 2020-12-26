@@ -3,7 +3,14 @@ package Audio::StreamGenerator;
 use strict;
 use warnings;
 use Data::Dumper;
+use Log::Log4perl qw(:easy);
+
 autoflush STDERR;
+
+Log::Log4perl->easy_init($DEBUG);
+
+my $logger = Log::Log4perl->get_logger('Audio::StreamGenerator');
+
 
 sub new {
     my ( $class, $args ) = @_;
@@ -54,7 +61,7 @@ sub stream {
         if ( eof( $self->{source} ) || $self->{skip} ) {
 
             if ($self->{skip}) {
-                print STDERR "shortening buffer for skip...\n";
+                $logger->info('shortening buffer for skip...');
                 pop @{ $self->{buffer} }
                     for 0 ... ( $self->{sample_rate} * ( $self->{normal_fade_seconds} - $self->{skip_fade_seconds} ) );
             }
@@ -63,19 +70,18 @@ sub stream {
             my $old_elapsed_seconds = $self->{elapsed} / $self->{sample_rate};
             $self->{source} = $self->_do_get_new_source();
 
-            print STDERR "old_elapsed_seconds: $old_elapsed_seconds\n";
+            $logger->info("old_elapsed_seconds: $old_elapsed_seconds");
             if ( $old_elapsed_seconds < ( $self->{normal_fade_seconds} * 2 ) ) {
                 $short_clips_seen++;
                 if ( $short_clips_seen >= 2 ) {
-                    print STDERR "not mixing\n";
+                    $logger->info('not mixing');
                     next;
                 } else {
-                    print STDERR
-                        "short, but mixing anyway because short_clips_seen is $short_clips_seen and old_elapsed_seconds is $old_elapsed_seconds\n";
+                    $logger->info("short, but mixing anyway because short_clips_seen is $short_clips_seen and old_elapsed_seconds is $old_elapsed_seconds");
                 }
             } else {
                 $short_clips_seen = 0;
-                print STDERR "mixing\n";
+                $logger->info('mixing');
             }
 
             my $index                  = 0;
@@ -96,8 +102,8 @@ sub stream {
                 $index++;
             }
 
-            print STDERR "last loud sample index: $last_loud_sample_index of " . scalar( @{ $self->{buffer} } ) . "\n";
-            print STDERR "loudest sample value: $max_old\n";
+            $logger->info("last loud sample index: $last_loud_sample_index of " . scalar( @{ $self->{buffer} } ) );
+            $logger->info("loudest sample value: $max_old");
 
             my @new_buffer;
             while ( @new_buffer < @{ $self->{buffer} } ) {
@@ -122,13 +128,13 @@ sub stream {
 
                 if ( !$self->{skip} && $index <= $last_loud_sample_index ) {
                     if ( defined($full_second) ) {
-                        print STDERR "skipping second $full_second...\n";
+                        $logger->info("skipping second $full_second...");
                     }
                     next;
                 }
 
                 if ( defined $full_second ) {
-                    print STDERR "mixing second $full_second...\n";
+                    $logger->info("mixing second $full_second...");
                 }
 
                 if ($self->{skip}) {
@@ -161,7 +167,7 @@ sub stream {
             my $channel = 0;
 
             foreach my $channel (@channels) {
-                print STDERR "channel $channel needs volume adjustment\n"
+                $logger->info( "channel $channel needs volume adjustment" )
                    if ( $max[$channel] > $maxint );
             }
 
@@ -184,7 +190,7 @@ sub stream {
             push( @{ $self->{buffer} }, $sample );
         }
 
-        $self->send_one_sample();
+        $self->_send_one_sample();
 
         if ( !( $self->{elapsed} % $self->{sample_rate} )
             && defined( $self->{run_every_second} ) )
