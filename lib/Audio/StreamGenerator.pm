@@ -363,6 +363,8 @@ Example:
 
 This will tell pv to be quiet (no output to STDERR), to allow a maximum throughput of 44100 samples per second * 2 bytes per sample * 2 channels = 176400 bytes per second, and keep a buffer of 176400 Bps * 20 seconds = 3528000 bytes
 
+The out_fh command is also the place where you could insert an sound processing solution like the command line version of <Stereo tool|https://www.stereotool.com/> - just pipe the audio first to that tool, and from there to your encoder. 
+
 =head2 get_new_source
 
 Reference to a sub that will be called every time that a new source (audio file) is needed. Needs to return a readable filehandle that will output signed 16-bit little-endian PCM audio. 
