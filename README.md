@@ -25,7 +25,6 @@ sub get_new_source {
             '/usr/bin/ffmpeg',
             '-i',
             $fullpath,
-            '-af', $af_arg,
             '-loglevel', 'quiet',
             '-f', 's16le',
             '-acodec', 'pcm_s16le',

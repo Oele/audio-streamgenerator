@@ -283,7 +283,6 @@ Audio::StreamGenerator - create a 'radio' stream by mixing ('cross fading') mult
                 '/usr/bin/ffmpeg',
                 '-i',
                 $fullpath,
-                '-af', $af_arg,
                 '-loglevel', 'quiet',
                 '-f', 's16le',
                 '-acodec', 'pcm_s16le',
