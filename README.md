@@ -123,7 +123,7 @@ This sub will be run after each second of playback, with the StreamGenerator obj
 
 ### normal\_fade\_seconds
 
-Amount of seconds that we want tracks to overlap. This is only the initial/max value - the mixing algorithm may choose to mix less seconds if the old track ends with loud samples.
+Amount of seconds that we want tracks to overlap. This is only the initial/max value - the mixing algorithm may decide to mix less seconds if the old track ends with loud samples.
 
 ### skip\_fade\_seconds
 
