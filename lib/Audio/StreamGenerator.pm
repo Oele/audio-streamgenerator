@@ -8,16 +8,14 @@ Log::Log4perl->easy_init($DEBUG);
 
 my $logger = Log::Log4perl->get_logger('Audio::StreamGenerator');
 
-
 sub new {
     my ( $class, %args ) = @_;
 
-
     my %defaults = (
-        normal_fade_seconds => 5,
-        skip_fade_seconds => 3,
-        sample_rate => 44100,
-        channels_amount => 2,
+        normal_fade_seconds         => 5,
+        skip_fade_seconds           => 3,
+        sample_rate                 => 44100,
+        channels_amount             => 2,
         max_vol_before_mix_fraction => 0.75
     );
 
@@ -33,14 +31,14 @@ sub new {
     foreach my $key (@mandatory_keys) {
         die "value for $key is missing" if !defined( $args{$key} );
     }
-    my %key_lookup = map {$_ => 1} ( @mandatory_keys, @optional_keys );
+    my %key_lookup = map { $_ => 1 } ( @mandatory_keys, @optional_keys );
 
     foreach my $key ( keys %args ) {
         die "unknown argument '$key'"
-            if !defined($key_lookup{$key});
+            if !defined( $key_lookup{$key} );
     }
 
-    my %self = (%defaults, %args{ @mandatory_keys, @optional_keys });
+    my %self = ( %defaults, %args{ @mandatory_keys, @optional_keys } );
 
     bless \%self, $class;
 }
@@ -50,19 +48,19 @@ sub stream {
 
     $self->{source} = $self->_do_get_new_source();
     $self->{buffer} = [];
-    $self->{skip} = 0;
+    $self->{skip}   = 0;
 
     my $short_clips_seen = 0;
     my $maxint           = 32767;
 
     my @channels;
-    push @channels, $_ for 0...($self->{channels_amount}-1);
+    push @channels, $_ for 0 ... ( $self->{channels_amount} - 1 );
 
     while (1) {
 
         if ( eof( $self->{source} ) || $self->{skip} ) {
 
-            if ($self->{skip}) {
+            if ( $self->{skip} ) {
                 $logger->info('shortening buffer for skip...');
                 pop @{ $self->{buffer} }
                     for 0 ... ( $self->{sample_rate} * ( $self->{normal_fade_seconds} - $self->{skip_fade_seconds} ) );
@@ -79,7 +77,9 @@ sub stream {
                     $logger->info('not mixing');
                     next;
                 } else {
-                    $logger->info("short, but mixing anyway because short_clips_seen is $short_clips_seen and old_elapsed_seconds is $old_elapsed_seconds");
+                    $logger->info(
+                        "short, but mixing anyway because short_clips_seen is $short_clips_seen and old_elapsed_seconds is $old_elapsed_seconds"
+                    );
                 }
             } else {
                 $short_clips_seen = 0;
@@ -104,7 +104,7 @@ sub stream {
                 $index++;
             }
 
-            $logger->info("last loud sample index: $last_loud_sample_index of " . scalar( @{ $self->{buffer} } ) );
+            $logger->info( "last loud sample index: $last_loud_sample_index of " . scalar( @{ $self->{buffer} } ) );
             $logger->info("loudest sample value: $max_old");
 
             my @new_buffer;
@@ -139,7 +139,7 @@ sub stream {
                     $logger->info("mixing second $full_second...");
                 }
 
-                if ($self->{skip}) {
+                if ( $self->{skip} ) {
                     my $fraction = $togo / $total;
                     foreach my $single_sample (@$sample) {
                         $single_sample *= $fraction;
@@ -153,7 +153,6 @@ sub stream {
                         $sample->[$channel] += $newsample->[$channel];
                     }
                 }
-
 
                 foreach my $channel (@channels) {
                     my $value = $sample->[$channel];
@@ -169,8 +168,8 @@ sub stream {
             my $channel = 0;
 
             foreach my $channel (@channels) {
-                $logger->info( "channel $channel needs volume adjustment" )
-                   if ( $max[$channel] > $maxint );
+                $logger->info("channel $channel needs volume adjustment")
+                    if ( $max[$channel] > $maxint );
             }
 
             foreach my $sample ( @{ $self->{buffer} } ) {
@@ -206,19 +205,18 @@ sub stream {
 
 sub get_elapsed_samples {
     my $self = shift;
-    return $self->{elapsed}
+    return $self->{elapsed};
 }
 
 sub get_elapsed_seconds {
     my $self = shift;
-    return $self->{elapsed}/$self->{sample_rate}
+    return $self->{elapsed} / $self->{sample_rate};
 }
-
 
 sub _send_one_sample {
     my $self   = shift;
     my $sample = shift @{ $self->{buffer} };
-    my $fh = $self->{out_fh};
+    my $fh     = $self->{out_fh};
     print $fh map { pack 's*', $_ } @$sample;
 }
 
@@ -243,18 +241,17 @@ sub _get_sample {
 }
 
 sub _do_get_new_source {
-	my $self = shift;
-	$self->{elapsed}  = 0;
+    my $self = shift;
+    $self->{elapsed} = 0;
     return $self->{get_new_source}();
 }
 
 sub skip {
     my $self = shift;
-    $self->{skip} = 1
+    $self->{skip} = 1;
 }
 
 1;
-
 
 __END__
 

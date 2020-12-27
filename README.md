@@ -41,7 +41,7 @@ sub run_every_second {
     # another second has passed, 
     my $streamert = shift;
     my $position = $streamert->get_elapsed_seconds();
-    print STDERR "\rnow at position $position";
+    print STDERR "now at position $position\r";
     if ([-some external event-]) {  # skip to the next song
         $streamert->skip()
     }
@@ -132,8 +132,18 @@ When mixing 2 tracks, StreamGenerator needs to know what the last 'loud' sample 
 
 ### get\_elapsed\_samples
 
+```perl
+my $elapsed_samples = $streamer->get_elapsed_samples();
+print "$elapsed_samples played so far\r";
+```
+
 Get the amount of played samples in the current track - this can be called from the "run\_every\_second" sub. 
 
 ### get\_elapsed\_seconds
+
+```perl
+my $elapsed_seconds = $streamer->get_elapsed_seconds();
+print "now at position $elapsed_seconds of the current track\r";
+```
 
 Get the amount of elapsed seconds in the current track - in other words the current position in the track. This equals to get\_elapsed\_samples/sample\_rate . 
