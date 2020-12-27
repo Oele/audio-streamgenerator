@@ -32,7 +32,7 @@ sub get_new_source {
             '-ar', '44100',
             '-'
     );
-    open($source, '-|', @ffmpeg_cmd);
+    open(my $source, '-|', @ffmpeg_cmd);
     return $source;
 }
 
@@ -45,11 +45,11 @@ sub run_every_second {
     }
 }
 
-my $streamer = Audio::StreamGenerator->new({
+my $streamer = Audio::StreamGenerator->new(
     out_fh => $out_fh,
     get_new_source => \&get_new_source,
     run_every_second => \&run_every_second,
-});
+);
 
 $streamer->stream();
 ```
