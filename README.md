@@ -144,6 +144,8 @@ When mixing 2 tracks, StreamGenerator needs to find out what the last loud sampl
 
 ## METHODS
 
+### stream
+
 ```
 $streamer->stream();
 ```
@@ -172,11 +174,3 @@ print "now at position $elapsed_seconds of the current track\r";
 ```
 
 Get the amount of elapsed seconds in the current track - in other words the current position in the track. This equals to get\_elapsed\_samples/sample\_rate . 
-
-## POD ERRORS
-
-Hey! **The above document had some coding errors, which are explained below:**
-
-- Around line 398:
-
-    Unknown directive: =head
