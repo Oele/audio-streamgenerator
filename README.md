@@ -95,6 +95,23 @@ max_vol_before_mix_fraction     0.75        no
 
 The outgoing file handle - this is where the generated signed 16-bit little-endian PCM audio stream is sent to. 
 
+Note that StreamGenerator has no notion of time - if you don't slow it down, it will process data as fast as it can - which is faster than your listeners are able to play the stream. 
+On Icecast, this will cause listeners to be disconnected because they are "too far behind". 
+
+This can be addressed by making sure that the out\_fh process consumes the audio no faster than realtime. 
+
+If you are using ffmpeg, you can achieve this with its '-re' option. 
+
+Another possibility is to first pipe the data to a command like 'pv' to rate limit the data. An additional advantage of 'pv' is that it can also add a buffer between the StreamGenerator and the encoder, which can absorb any short delays that may occur when StreamGenerator is switching to a new track. 
+
+Example:
+
+```
+pv -q -L 176400 -B 3528000 | ffmpeg ...
+```
+
+This will tell pv to be quiet (no output to STDERR), to allow a maximum throughput of 44100 samples per second \* 2 bytes per sample \* 2 channels = 176400 bytes per second, and keep a buffer of 176400 Bps \* 20 seconds = 3528000 bytes
+
 ### get\_new\_source
 
 Reference to a sub that will be called every time that a new source (audio file) is needed. Needs to return a readable filehandle that will output signed 16-bit little-endian PCM audio. 
