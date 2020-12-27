@@ -295,11 +295,10 @@ Audio::StreamGenerator - create a 'radio' stream by mixing ('cross fading') mult
     }
     
     sub run_every_second {
-        # another second has passed, 
         my $streamert = shift;
         my $position = $streamert->get_elapsed_seconds();
         print STDERR "now at position $position\r";
-        if ([-some external event-]) {  # skip to the next song
+        if ([-some external event happened-]) {  # skip to the next song requested
             $streamert->skip()
         }
     }
