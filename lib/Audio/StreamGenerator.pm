@@ -395,6 +395,12 @@ When mixing 2 tracks, StreamGenerator needs to find out what the last loud sampl
 
 =head1 METHODS
 
+=head stream
+
+    $streamer->stream();
+
+Start the actual audio stream.
+
 =head2 skip
     $streamer->skip();
 
