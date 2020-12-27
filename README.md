@@ -111,7 +111,7 @@ pv -q -L 176400 -B 3528000 | ffmpeg ...
 
 This will tell pv to be quiet (no output to STDERR), to allow a maximum throughput of 44100 samples per second \* 2 bytes per sample \* 2 channels = 176400 bytes per second, and keep a buffer of 176400 Bps \* 20 seconds = 3528000 bytes
 
-The out\_fh command is also the place where you could insert an sound processing solution like the command line version of [Stereo tool](https://www.stereotool.com/) - just pipe the audio first to that tool, and from there to your encoder. 
+The out\_fh command is also the place where you could insert a sound processing solution like the command line version of [Stereo tool](https://www.stereotool.com/) - just pipe the audio first to that tool, and from there to your encoder. 
 
 ### get\_new\_source
 
