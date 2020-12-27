@@ -147,7 +147,7 @@ When mixing 2 tracks, StreamGenerator needs to find out what the last loud sampl
 ### skip
     $streamer->skip();
 
-Skip to the next track without finishing the current one. This can be called from the "run\_every\_second" sub, for example by checking whether a flag was set in a database, or whether a file exists. 
+Skip to the next track without finishing the current one. This can be called from the "run\_every\_second" sub, for example after checking whether a 'skip' flag was set in a database, or whether a file exists. 
 
 ### get\_elapsed\_samples
 
