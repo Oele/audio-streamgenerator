@@ -1,6 +1,6 @@
 package Audio::StreamGenerator;
 
-our $VERSION = 0.04;
+our $VERSION = 0.05;
 
 use strict;
 use warnings;
@@ -403,6 +403,7 @@ When mixing 2 tracks, StreamGenerator needs to find out what the last loud sampl
 Start the actual audio stream.
 
 =head2 skip
+
     $streamer->skip();
 
 Skip to the next track without finishing the current one. This can be called from the "run_every_second" sub, for example after checking whether a 'skip' flag was set in a database, or whether a file exists. 
