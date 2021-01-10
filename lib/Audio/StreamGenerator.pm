@@ -1,5 +1,7 @@
 package Audio::StreamGenerator;
 
+our $VERSION = 0.01;
+
 use strict;
 use warnings;
 use Log::Log4perl qw(:easy);
