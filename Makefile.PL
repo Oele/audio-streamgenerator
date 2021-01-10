@@ -21,7 +21,9 @@ WriteMakefile(
               url  => 'https://github.com/Oele/audio-streamgenerator.git',
               web  => 'https://github.com/Oele/audio-streamgenerator',
           },
-          bugtracker => 'https://github.com/Oele/audio-streamgenerator/issues',
+          bugtracker => {
+              web => 'https://github.com/Oele/audio-streamgenerator/issues'
+          }
       }})
    : ()
   ),
