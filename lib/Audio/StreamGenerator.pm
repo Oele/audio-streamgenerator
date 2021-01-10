@@ -29,12 +29,12 @@ sub new {
     );
 
     foreach my $key (@mandatory_keys) {
-        die "value for $key is missing" if !defined( $args{$key} );
+        $logger->logcarp("value for $key is missing") if !defined( $args{$key} );
     }
     my %key_lookup = map { $_ => 1 } ( @mandatory_keys, @optional_keys );
 
     foreach my $key ( keys %args ) {
-        die "unknown argument '$key'"
+        $logger->logcarp("unknown argument '$key'")
             if !defined( $key_lookup{$key} );
     }
 
