@@ -76,6 +76,7 @@ sub stream {
             if ( $old_elapsed_seconds < ( $self->{normal_fade_seconds} * 2 ) ) {
                 $short_clips_seen++;
                 if ( $short_clips_seen >= 2 ) {
+                    $self->{skip} = 0;
                     $logger->info('not mixing');
                     next;
                 } else {
