@@ -47,9 +47,10 @@ sub new {
 
 sub stream {
     my $self = shift;
+    my @buffer;
 
     $self->{source} = $self->_do_get_new_source();
-    $self->{buffer} = [];
+    $self->{buffer} = \@buffer;
     $self->{skip}   = 0;
 
     my $short_clips_seen = 0;
@@ -68,7 +69,7 @@ sub stream {
 
             if ( $self->{skip} ) {
                 $logger->info('shortening buffer for skip...');
-                pop @{ $self->{buffer} }
+                pop @buffer
                     for 0 ... ( $self->{sample_rate} * ( $self->{normal_fade_seconds} - $self->{skip_fade_seconds} ) );
             }
 
@@ -94,13 +95,13 @@ sub stream {
             }
 
             # make the buffer mixable
-            $self->{buffer} = [map { $self->_unpack_sample($_) } @{$self->{buffer}}];
+            @buffer = map { $self->_unpack_sample($_) } @buffer;
 
             my $index                  = 0;
             my $last_loud_sample_index = -1;
             my $threshold              = $maxint * $self->{max_vol_before_mix_fraction};
             my $max_old                = 0;
-            foreach my $sample ( @{ $self->{buffer} } ) {
+            foreach my $sample ( @buffer ) {
                 foreach (@channels) {
                     my $single_sample = $sample->[$_];
                     $single_sample *= -1 if $single_sample < 0;
@@ -118,16 +119,16 @@ sub stream {
             $logger->info("loudest sample value: $max_old");
 
             my @new_buffer;
-            while ( @new_buffer < @{ $self->{buffer} } ) {
+            while ( @new_buffer < @buffer ) {
                 my $sample = $self->_unpack_sample($self->_get_sample);
                 last if !defined($sample);
                 push( @new_buffer, $sample );
             }
 
             my @max   = (0) x $self->{channels_amount};
-            my $total = scalar( @{ $self->{buffer} } );
+            my $total = @buffer;
             $index = -1;
-            foreach my $sample ( @{ $self->{buffer} } ) {
+            foreach my $sample (@buffer) {
                 $index++;
                 my $togo = $total - $index;
 
@@ -173,38 +174,36 @@ sub stream {
                 }
             }
 
-            push( @{ $self->{buffer} }, @new_buffer );
-
+            push( @buffer, @new_buffer );
 
             # Volume adjustment
             foreach my $channel ( grep { $max[$_] > $maxint } @channels ) {
                 $logger->info("channel $channel needs volume adjustment");
 
-                foreach my $sample ( @{ $self->{buffer} } ) {
+                foreach my $sample ( @buffer ) {
                     $sample->[$channel] =
                         ( $sample->[$channel] / $max[$channel] ) * $maxint;
                 }
             }
 
             $self->{skip} = 0;
-
         }
 
-        while ( @{ $self->{buffer} } < ( $self->{normal_fade_seconds} * $self->{sample_rate} ) ) {
+        my $needed = $self->{normal_fade_seconds} * $self->{sample_rate};
+        while ( @buffer < $needed ) {
             my $sample = $self->_get_sample();
             if (!defined($sample)) {
                 $eof = 1;
                 last;
             }
-            push( @{ $self->{buffer} }, $sample );
+            push( @buffer, $sample );
         }
 
-        $self->_send_one_sample() while @{ $self->{buffer} } >= ( $self->{normal_fade_seconds} * $self->{sample_rate} );
+        $self->_send_one_sample() while @buffer >= $needed;
 
         if ( defined( $self->{run_every_second} ) && !( $self->{elapsed} % $self->{sample_rate} )) {
             $self->{run_every_second}($self);
         }
-
     }
 
 }
