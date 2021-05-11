@@ -242,14 +242,15 @@ sub _get_sample {
     my $self = shift;
 
     my $data;
-    my $len = read( $self->{source}, $data, $self->{channels_amount} * 2 );
+    my $bytes = $self->{channels_amount} * 2;
+    my $len   = read( $self->{source}, $data, $bytes );
 
     return undef if $len == 0;
     $self->{elapsed}++;
 
-    if ( $len != ( $self->{channels_amount} * 2 ) ) {
+    if ( $len != $bytes ) {
         # pack's "s" is 16 bit unsigned, so we need two bytes
-        $data = "\x00\x00" x ( $self->{channels_amount} * 2 );
+        $data = "\x00\x00" x $bytes ;
     }
 
     return $data;
