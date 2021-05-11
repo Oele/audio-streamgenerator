@@ -201,9 +201,7 @@ sub stream {
 
         $self->_send_one_sample() while @{ $self->{buffer} } >= ( $self->{normal_fade_seconds} * $self->{sample_rate} );
 
-        if ( !( $self->{elapsed} % $self->{sample_rate} )
-            && defined( $self->{run_every_second} ) )
-        {
+        if ( defined( $self->{run_every_second} ) && !( $self->{elapsed} % $self->{sample_rate} )) {
             $self->{run_every_second}($self);
         }
 
