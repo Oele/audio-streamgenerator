@@ -175,10 +175,9 @@ sub stream {
 
             push( @{ $self->{buffer} }, @new_buffer );
 
-            my $channel = 0;
 
             # Volume adjustment
-            foreach my $channel ( grep { $max[$channel] > $maxint } @channels ) {
+            foreach my $channel ( grep { $max[$_] > $maxint } @channels ) {
                 $logger->info("channel $channel needs volume adjustment");
 
                 foreach my $sample ( @{ $self->{buffer} } ) {
