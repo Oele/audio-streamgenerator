@@ -70,10 +70,11 @@ sub stream {
             if ( $self->{skip} ) {
                 $logger->info('shortening buffer for skip...');
                 pop @buffer
-                    for 0 ... ( $self->{sample_rate} * ( $self->{normal_fade_seconds} - $self->{skip_fade_seconds} ) );
+                    while @buffer > ( $self->{skip_fade_seconds} * $self->{sample_rate} );
             }
 
             close( $self->{source} );
+            my $old_elapsed_samples = $self->{elapsed};
             my $old_elapsed_seconds = $self->{elapsed} / $self->{sample_rate};
             $self->{source} = $self->_do_get_new_source();
 
@@ -93,6 +94,9 @@ sub stream {
                 $short_clips_seen = 0;
                 $logger->info('mixing');
             }
+
+            my @skipped_buffer;
+            push (@skipped_buffer, shift @buffer) while @buffer > ($old_elapsed_samples - $self->{sample_rate} );
 
             # make the buffer mixable
             @buffer = map { $self->_unpack_sample($_) } @buffer;
@@ -175,6 +179,7 @@ sub stream {
             }
 
             push( @buffer, @new_buffer );
+            unshift( @buffer, @skipped_buffer );
 
             # Volume adjustment
             foreach my $channel ( grep { $max[$_] > $maxint } @channels ) {
