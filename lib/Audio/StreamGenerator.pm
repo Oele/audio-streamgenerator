@@ -104,7 +104,7 @@ sub stream {
 
             my $index                  = 0;
             my $last_loud_sample_index = -1;
-            my $last_audible_sample_index = @buffer - 1;
+            my $last_audible_sample_index = -1;
             my $loud_threshold         = $maxint * $self->{max_vol_before_mix_fraction};
             my $audible_threshold      = $maxint * $self->{min_audible_vol_fraction};
             my $max_old                = 0;
