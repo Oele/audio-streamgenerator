@@ -19,7 +19,7 @@ sub new {
         sample_rate                 => 44100,
         channels_amount             => 2,
         max_vol_before_mix_fraction => 0.75,
-        min_audible_vol_fraction    => 0.1
+        min_audible_vol_fraction    => 0.05
     );
 
     my @mandatory_keys = qw (
@@ -371,7 +371,7 @@ The following options can be specified:
     sample_rate                     44100       no
     channels_amount                 2           no
     max_vol_before_mix_fraction     0.75        no
-    min_audible_vol_fraction        0.1         no
+    min_audible_vol_fraction        0.05        no
 
 =head2 out_fh
 
