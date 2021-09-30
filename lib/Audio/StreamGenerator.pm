@@ -18,7 +18,8 @@ sub new {
         skip_fade_seconds           => 3,
         sample_rate                 => 44100,
         channels_amount             => 2,
-        max_vol_before_mix_fraction => 0.75
+        max_vol_before_mix_fraction => 0.75,
+        min_audible_vol_fraction    => 0.1
     );
 
     my @mandatory_keys = qw (
@@ -103,14 +104,19 @@ sub stream {
 
             my $index                  = 0;
             my $last_loud_sample_index = -1;
-            my $threshold              = $maxint * $self->{max_vol_before_mix_fraction};
+            my $last_audible_sample_index = @buffer - 1;
+            my $loud_threshold         = $maxint * $self->{max_vol_before_mix_fraction};
+            my $audible_threshold      = $maxint * $self->{min_audible_vol_fraction};
             my $max_old                = 0;
             foreach my $sample ( @buffer ) {
                 foreach (@channels) {
                     my $single_sample = $sample->[$_];
                     $single_sample *= -1 if $single_sample < 0;
-                    if ( $single_sample >= $threshold ) {
+                    if ( $single_sample >= $loud_threshold ) {
                         $last_loud_sample_index = $index;
+                    }
+                    if ($single_sample >= $audible_threshold) {
+                        $last_audible_sample_index = $index;
                     }
                     if ( $single_sample > $max_old ) {
                         $max_old = $single_sample;
@@ -120,7 +126,10 @@ sub stream {
             }
 
             $logger->info( "last loud sample index: $last_loud_sample_index of " . scalar( @{ $self->{buffer} } ) );
+            $logger->info( "last audible sample index: $last_audible_sample_index of " . scalar( @{ $self->{buffer} } ) );
             $logger->info("loudest sample value: $max_old");
+
+            pop @buffer while @buffer > ($last_audible_sample_index + 1);
 
             my @new_buffer;
             while ( @new_buffer < @buffer ) {
@@ -362,6 +371,7 @@ The following options can be specified:
     sample_rate                     44100       no
     channels_amount                 2           no
     max_vol_before_mix_fraction     0.75        no
+    min_audible_vol_fraction        0.1         no
 
 =head2 out_fh
 
@@ -412,6 +422,10 @@ Amount of audio channels, this is normally 2 (stereo).
 
 This tells StreamGenerator what the minimum volume of a 'loud' sample is. It is expressed as a fraction of the maximum volume.
 When mixing 2 tracks, StreamGenerator needs to find out what the last loud sample of the old track is so that it can start the next song immediately after that.
+
+=head2 min_audible_vol_fraction
+
+Audio softer than this volume fraction at the end of a track (and within the buffer) will be skipped. 
 
 =head1 METHODS
 
