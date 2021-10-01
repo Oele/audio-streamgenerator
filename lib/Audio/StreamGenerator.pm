@@ -96,12 +96,12 @@ sub stream {
                 $logger->info('mixing');
             }
 
+            # make the buffer mixable
+            @buffer = map { $self->_unpack_sample($_) } @buffer;
+
             my @skipped_buffer;
             push (@skipped_buffer, shift @buffer) 
                 while ( @buffer && @buffer > ($old_elapsed_samples - $self->{sample_rate} ) );
-
-            # make the buffer mixable
-            @buffer = map { $self->_unpack_sample($_) } @buffer;
 
             my $index                  = 0;
             my $last_loud_sample_index = -1;
