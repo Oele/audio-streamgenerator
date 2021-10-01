@@ -97,7 +97,8 @@ sub stream {
             }
 
             my @skipped_buffer;
-            push (@skipped_buffer, shift @buffer) while @buffer > ($old_elapsed_samples - $self->{sample_rate} );
+            push (@skipped_buffer, shift @buffer) 
+                while ( @buffer && @buffer > ($old_elapsed_samples - $self->{sample_rate} ) );
 
             # make the buffer mixable
             @buffer = map { $self->_unpack_sample($_) } @buffer;
