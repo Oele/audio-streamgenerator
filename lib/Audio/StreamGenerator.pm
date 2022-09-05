@@ -56,7 +56,7 @@ sub new {
     bless \%self, $class;
 }
 
-sub stream {
+sub get_streamer {
     my $self = shift;
 
     $self->debug( "starting stream" );
@@ -75,7 +75,7 @@ sub stream {
 
     my $eof = undef;
 
-    while (1) {
+    return sub {
 
         $eof = eof( $self->{source} ) unless defined $eof;
         if ( $eof || $self->{skip} ) {
@@ -111,7 +111,7 @@ sub stream {
             @buffer = map { $self->_unpack_sample($_) } @buffer;
 
             my @skipped_buffer;
-            push (@skipped_buffer, shift @buffer) 
+            push (@skipped_buffer, shift @buffer)
                 while ( @buffer && @buffer > ($old_elapsed_samples - $self->{sample_rate} ) );
 
             my $index                  = 0;
@@ -230,8 +230,16 @@ sub stream {
         if ( defined( $self->{run_every_second} ) && !( $self->{elapsed} % $self->{sample_rate} )) {
             $self->{run_every_second}($self);
         }
-    }
+    };
+}
 
+sub stream {
+    my $self = shift;
+    my $streamer = $self->get_streamer;
+
+    while (1) {
+        $streamer->();
+    }
 }
 
 sub get_elapsed_samples {
@@ -438,7 +446,7 @@ When mixing 2 tracks, StreamGenerator needs to find out what the last loud sampl
 
 =head2 min_audible_vol_fraction
 
-Audio softer than this volume fraction at the end of a track (and within the buffer) will be skipped. 
+Audio softer than this volume fraction at the end of a track (and within the buffer) will be skipped.
 
 =head2 debug
 
@@ -471,3 +479,4 @@ Get the amount of played samples in the current track - this can be called from 
     print "now at position $elapsed_seconds of the current track\r";
 
 Get the amount of elapsed seconds in the current track - in other words the current position in the track. This equals to get_elapsed_samples/sample_rate .
+
