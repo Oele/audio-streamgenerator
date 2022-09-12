@@ -4,11 +4,18 @@ our $VERSION = 0.06;
 
 use strict;
 use warnings;
-use Log::Log4perl qw(:easy);
+use Carp;
 
-Log::Log4perl->easy_init($DEBUG);
-
-my $logger = Log::Log4perl->get_logger('Audio::StreamGenerator');
+sub debug {
+    my ($self, $message) = @_;
+    return unless $self->{debug};
+    if (ref $self->{debug} eq 'CODE') {
+        &{ $self->{debug} }($message);
+    }
+    else {
+        print STDERR $message . "\n";
+    }
+}
 
 sub new {
     my ( $class, %args ) = @_;
@@ -19,7 +26,8 @@ sub new {
         sample_rate                 => 44100,
         channels_amount             => 2,
         max_vol_before_mix_fraction => 0.75,
-        min_audible_vol_fraction    => 0.05
+        min_audible_vol_fraction    => 0.005,
+        debug                       => 0
     );
 
     my @mandatory_keys = qw (
@@ -29,15 +37,16 @@ sub new {
 
     my @optional_keys = qw(
         run_every_second
+        debug
     );
 
     foreach my $key (@mandatory_keys) {
-        $logger->logcarp("value for $key is missing") if !defined( $args{$key} );
+        croak "value for $key is missing" if !defined( $args{$key} );
     }
     my %key_lookup = map { $_ => 1 } ( @mandatory_keys, @optional_keys );
 
     foreach my $key ( keys %args ) {
-        $logger->logcarp("unknown argument '$key'")
+        croak "unknown argument '$key'"
             if !defined( $key_lookup{$key} );
     }
 
@@ -48,6 +57,9 @@ sub new {
 
 sub stream {
     my $self = shift;
+
+    $self->debug( "starting stream" );
+
     my @buffer;
 
     $self->{source} = $self->_do_get_new_source();
@@ -69,7 +81,7 @@ sub stream {
             $eof = undef;
 
             if ( $self->{skip} ) {
-                $logger->info('shortening buffer for skip...');
+                $self->debug( 'shortening buffer for skip...' );
                 pop @buffer
                     while @buffer > ( $self->{skip_fade_seconds} * $self->{sample_rate} );
             }
@@ -79,21 +91,19 @@ sub stream {
             my $old_elapsed_seconds = $self->{elapsed} / $self->{sample_rate};
             $self->{source} = $self->_do_get_new_source();
 
-            $logger->info("old_elapsed_seconds: $old_elapsed_seconds");
+            $self->debug( "old_elapsed_seconds: $old_elapsed_seconds" );
             if ( $old_elapsed_seconds < ( $self->{normal_fade_seconds} * 2 ) ) {
                 $short_clips_seen++;
                 if ( $short_clips_seen >= 2 ) {
                     $self->{skip} = 0;
-                    $logger->info('not mixing');
+                    $self->debug( 'not mixing' );
                     next;
                 } else {
-                    $logger->info(
-                        "short, but mixing anyway because short_clips_seen is $short_clips_seen and old_elapsed_seconds is $old_elapsed_seconds"
-                    );
+                    $self->debug( "short, but mixing anyway because short_clips_seen is $short_clips_seen and old_elapsed_seconds is $old_elapsed_seconds" );
                 }
             } else {
                 $short_clips_seen = 0;
-                $logger->info('mixing');
+                $self->debug( 'mixing' );
             }
 
             # make the buffer mixable
@@ -126,9 +136,9 @@ sub stream {
                 $index++;
             }
 
-            $logger->info( "last loud sample index: $last_loud_sample_index of " . scalar( @{ $self->{buffer} } ) );
-            $logger->info( "last audible sample index: $last_audible_sample_index of " . scalar( @{ $self->{buffer} } ) );
-            $logger->info("loudest sample value: $max_old");
+            $self->debug( "last loud sample index: $last_loud_sample_index of " . scalar( @{ $self->{buffer} } ) );
+            $self->debug( "last audible sample index: $last_audible_sample_index of " . scalar( @{ $self->{buffer} } ) );
+            $self->debug( "loudest sample value: $max_old" );
 
             pop @buffer while @buffer > ($last_audible_sample_index + 1);
 
@@ -155,13 +165,13 @@ sub stream {
 
                 if ( !$self->{skip} && $index <= $last_loud_sample_index ) {
                     if ( defined($full_second) ) {
-                        $logger->info("skipping second $full_second...");
+                        $self->debug( "skipping second $full_second..." );
                     }
                     next;
                 }
 
                 if ( defined $full_second ) {
-                    $logger->info("mixing second $full_second...");
+                    $self->debug( "mixing second $full_second..." );
                 }
 
                 if ( $self->{skip} ) {
@@ -193,7 +203,7 @@ sub stream {
 
             # Volume adjustment
             foreach my $channel ( grep { $max[$_] > $maxint } @channels ) {
-                $logger->info("channel $channel needs volume adjustment");
+                $self->debug( "channel $channel needs volume adjustment" );
 
                 foreach my $sample ( @buffer ) {
                     $sample->[$channel] =
@@ -372,7 +382,8 @@ The following options can be specified:
     sample_rate                     44100       no
     channels_amount                 2           no
     max_vol_before_mix_fraction     0.75        no
-    min_audible_vol_fraction        0.05        no
+    min_audible_vol_fraction        0.005       no
+    debug                           0           no
 
 =head2 out_fh
 
@@ -427,6 +438,10 @@ When mixing 2 tracks, StreamGenerator needs to find out what the last loud sampl
 =head2 min_audible_vol_fraction
 
 Audio softer than this volume fraction at the end of a track (and within the buffer) will be skipped. 
+
+=head2 debug
+
+Log debugging information. If the value is a code reference, the logs will be passed to that sub. Otherwise the value will be treated as a boolean. If true, logs will be printed to STDERR . 
 
 =head1 METHODS
 
