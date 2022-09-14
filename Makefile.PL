@@ -10,8 +10,7 @@ WriteMakefile(
   MIN_PERL_VERSION => '5.008004',
   PREREQ_PM        => {
     'strict'   => 0,
-    'warnings' => 0,
-    'Log::Log4perl' => 0
+    'warnings' => 0
   },
   (eval { ExtUtils::MakeMaker->VERSION(6.46) } ? (META_MERGE => {
       'meta-spec' => { version => 2 },
