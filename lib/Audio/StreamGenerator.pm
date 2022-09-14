@@ -5,12 +5,13 @@ our $VERSION = 0.06;
 use strict;
 use warnings;
 use Carp;
+use Data::Dumper;
 
 sub debug {
     my ($self, $message) = @_;
     return unless $self->{debug};
     if (ref $self->{debug} eq 'CODE') {
-        &{ $self->{debug} }($message);
+        $self->{debug}->($message)
     }
     else {
         print STDERR $message . "\n";
