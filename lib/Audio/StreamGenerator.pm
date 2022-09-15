@@ -28,7 +28,8 @@ sub new {
         channels_amount             => 2,
         max_vol_before_mix_fraction => 0.75,
         min_audible_vol_fraction    => 0.005,
-        debug                       => 0
+        debug                       => 0,
+        samples_batch               => 5000,
     );
 
     my @mandatory_keys = qw (
@@ -216,16 +217,14 @@ sub get_streamer {
         }
 
         my $needed = $self->{normal_fade_seconds} * $self->{sample_rate};
-        while ( @buffer < $needed ) {
-            my $sample = $self->_get_sample();
-            if (!defined($sample)) {
-                $eof = 1;
-                last;
-            }
-            push( @buffer, $sample );
-        }
+        my $diff = @buffer - $needed;
 
-        $self->_send_one_sample() while @buffer >= $needed;
+        if ($diff < 0) {
+            $eof = 1 unless $self->_get_samples($self->{sample_rate});
+        }
+        else {
+            $self->_send_samples($self->{sample_rate});
+        }
 
         if ( defined( $self->{run_every_second} ) && !( $self->{elapsed} % $self->{sample_rate} )) {
             $self->{run_every_second}($self);
@@ -264,6 +263,21 @@ sub _send_one_sample {
     }
 }
 
+sub _send_samples {
+    my ($self, $count) = @_;
+    return unless $count;
+
+    my @samples = map {
+        my $sample = $_;
+        ref $sample eq 'ARRAY'
+            ? map { pack 's', $_ } @$sample
+            : $sample
+            ;
+    } splice @{ $self->{buffer} }, 0, $count;
+
+    print {$self->{out_fh}} @samples;
+}
+
 sub _unpack_sample {
     my ($self, $sample) = @_;
 
@@ -288,6 +302,28 @@ sub _get_sample {
     }
 
     return $data;
+}
+
+sub _get_samples {
+    my ($self, $count) = @_;
+    return 1 unless $count;
+
+    my $data;
+    my $bytes_div = $self->{channels_amount} * 2;
+    my $bytes = $bytes_div * $count;
+    my $len   = read( $self->{source}, $data, $bytes );
+
+    $self->{elapsed} += $len;
+
+    if ( my $rest = $len % $bytes_div ) {
+        $data .= "\x00" x ($bytes_div - $rest)
+    }
+
+    while ($data) {
+        push @{ $self->{buffer} }, substr $data, 0, $bytes_div, '';
+    }
+
+    return 1;
 }
 
 sub _do_get_new_source {
