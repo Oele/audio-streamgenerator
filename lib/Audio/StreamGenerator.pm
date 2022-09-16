@@ -99,7 +99,7 @@ sub get_streamer {
                 if ( $short_clips_seen >= 2 ) {
                     $self->{skip} = 0;
                     $self->debug( 'not mixing' );
-                    next;
+                    return;
                 } else {
                     $self->debug( "short, but mixing anyway because short_clips_seen is $short_clips_seen and old_elapsed_seconds is $old_elapsed_seconds" );
                 }
@@ -224,9 +224,6 @@ sub get_streamer {
         }
         else {
             $self->_send_samples($self->{sample_rate});
-        }
-
-        if ( defined( $self->{run_every_second} ) && !( $self->{elapsed} % $self->{sample_rate} )) {
             $self->{run_every_second}($self);
         }
     };
@@ -313,17 +310,19 @@ sub _get_samples {
     my $bytes = $bytes_div * $count;
     my $len   = read( $self->{source}, $data, $bytes );
 
-    $self->{elapsed} += $len;
-
     if ( my $rest = $len % $bytes_div ) {
-        $data .= "\x00" x ($bytes_div - $rest)
+        my $add_bytes = $bytes_div - $rest;
+        $data .= "\x00" x $add_bytes;
+        $len+=$add_bytes
     }
+
+    $self->{elapsed} += ( $len / $bytes_div);
 
     while ($data) {
         push @{ $self->{buffer} }, substr $data, 0, $bytes_div, '';
     }
 
-    return 1;
+    return $len;
 }
 
 sub _do_get_new_source {
