@@ -88,7 +88,7 @@ sub get_streamer {
         }
         else {
             $self->_send_samples($self->{sample_rate});
-            $self->{run_every_second}($self);
+            $self->{run_every_second}($self) if defined $self->{run_every_second};
         }
     };
 }
