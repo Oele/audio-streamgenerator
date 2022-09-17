@@ -218,7 +218,6 @@ sub mix {
     }
 
     my @max   = (0) x $self->{channels_amount};
-    my $total = @$buffer;
     my $index = -1;
 
     # Loop over the remaining samples in the buffer of the old source
