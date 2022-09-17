@@ -34,8 +34,6 @@ sub new {
         min_audible_vol_fraction    => 0.005,
         debug                       => 0,
         samples_batch               => 5000,
-        short_tracks_max_amount     => 2,
-        short_track_max_seconds     => 10
     );
 
     my @mandatory_keys = qw (
@@ -72,8 +70,6 @@ sub get_streamer {
     $self->{buffer} = [];
     $self->{skip}   = 0;
     my $eof = undef;
-
-    $self->{short_tracks_seen} = 0;
 
     return sub {
         $eof = eof( $self->{source} ) unless defined $eof;
@@ -129,30 +125,6 @@ sub mix {
         }
     }
 
-    # Store how many samples/seconds were played in the old song because we need it later on
-    my $old_elapsed_samples = $self->{elapsed};
-    my $old_elapsed_seconds = $self->{elapsed} / $self->{sample_rate};
-
-    # Open the new track
-    $self->{source} = $self->_do_get_new_source();
-
-    $self->debug( "old_elapsed_seconds: $old_elapsed_seconds" );
-
-    # If we mix too many very short tracks immediately after each other, we run the risk of not producing
-    # audio output fast enough for 'real time' playback. So don't mix after seeing short_tracks_max_amount short tracks.
-    if ( $old_elapsed_seconds < ( $self->{short_track_max_seconds} ) ) {
-        $self->{short_tracks_seen}++;
-        if ( $self->{short_tracks_seen} >= $self->{short_tracks_max_amount} ) {
-            $self->debug( 'not mixing' );
-            return;
-        } else {
-            $self->debug( "short, but mixing anyway because $self->{short_tracks_seen} is $self->{short_tracks_seen} and old_elapsed_seconds is $old_elapsed_seconds" );
-        }
-    } else {
-        $self->{short_tracks_seen} = 0;
-        $self->debug( 'mixing' );
-    }
-
     # In case the old track was very short (a few seconds, shorter than the current buffer we are trying to mix),
     # there may still be audio from the previous old track in the buffer. 
     # In this case, skip to the beginning of the current old track, and keep the 'skipped' samples in @skipped_buffer, 
@@ -163,9 +135,11 @@ sub mix {
     # Can result in the new song starting before the jingle.
 
     my @skipped_buffer;
-    my $to_skip = @$buffer - ($old_elapsed_samples - $self->{sample_rate} );
+    my $to_skip = @$buffer - ($self->{elapsed} - $self->{sample_rate} );
     push (@skipped_buffer, splice(@$buffer, 0, $to_skip) );
 
+    # Open the new track
+    $self->{source} = $self->_do_get_new_source();
 
     # Find the index of the last sample that is 'audible' (loud enough to hear) in the remaining buffer of the old source:
     #
@@ -178,8 +152,7 @@ sub mix {
     FIND_LAST_AUDIBLE: foreach my $index (reverse 0 .. @$buffer-1) {
         my $sample = $buffer->[$index];
         foreach (0 .. $self->{channels_amount}-1) {
-            my $single_sample = abs($sample->[$_]);
-            if ($single_sample >= $audible_threshold) {
+            if (abs($sample->[$_]) >= $audible_threshold) {
                 $last_audible_sample_index = $index;
                 last FIND_LAST_AUDIBLE
             }
@@ -211,8 +184,7 @@ sub mix {
     FIND_LAST_LOUD: foreach my $index (reverse 0 .. @$buffer-1) {
         my $sample = $buffer->[$index];
         foreach (0 .. $self->{channels_amount}-1) {
-            my $single_sample = abs($sample->[$_]);
-            if ( $single_sample >= $loud_threshold ) {
+            if ( abs($sample->[$_]) >= $loud_threshold ) {
                 $last_loud_sample_index = $index;
                 last FIND_LAST_LOUD
             }
@@ -474,8 +446,6 @@ The following options can be specified:
     max_vol_before_mix_fraction     0.75        no
     min_audible_vol_fraction        0.005       no
     debug                           0           no
-    short_tracks_max_amount         2           no
-    short_track_max_seconds         10          no
 
 =head2 out_fh
 
@@ -538,15 +508,6 @@ Audio softer than this volume fraction at the end of a track (and within the buf
 =head2 debug
 
 Log debugging information. If the value is a code reference, the logs will be passed to that sub. Otherwise the value will be treated as a boolean. If true, logs will be printed to STDERR . 
-
-=head2 short_tracks_max_amount
-
-If too many really short tracks (like, jingles of only a few seconds) are mixed immediately after eachother, the stream slows down too much, resulting in buffer underruns for listeners. 
-This sets the maximum amount of short tracks that will be mixed - after this amount of mixes, the next track will be started without mixing. 
-
-=head2 short_track_max_seconds
-    
-Tracks shorter than this amount of seconds will be regarded as 'short'. 
 
 =head1 METHODS
 
