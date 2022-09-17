@@ -7,8 +7,7 @@ use Carp;
 our $VERSION = 0.06;
 
 use constant {
-    MAXINT => 32767,
-    MAX_AMOUNT_OF_SHORT_TRACKS_TO_MIX => 2
+    MAXINT => 32767
 };
 
 sub debug {
@@ -34,6 +33,8 @@ sub new {
         min_audible_vol_fraction    => 0.005,
         debug                       => 0,
         samples_batch               => 5000,
+        short_tracks_max_amount     => 2,
+        short_track_max_seconds     => 10
     );
 
     my @mandatory_keys = qw (
@@ -121,10 +122,10 @@ sub mix {
     $self->debug( "old_elapsed_seconds: $old_elapsed_seconds" );
 
     # If we mix too many very short tracks immediately after each other, we run the risk of not producing
-    # audio output fast enough for 'real time' playback. So don't mix after seeing MAX_AMOUNT_OF_SHORT_TRACKS_TO_MIX short tracks.
-    if ( $old_elapsed_seconds < ( $self->{normal_fade_seconds} * 2 ) ) {
+    # audio output fast enough for 'real time' playback. So don't mix after seeing short_tracks_max_amount short tracks.
+    if ( $old_elapsed_seconds < ( $self->{short_track_max_seconds} ) ) {
         $self->{short_tracks_seen}++;
-        if ( $self->{short_tracks_seen} >= MAX_AMOUNT_OF_SHORT_TRACKS_TO_MIX ) {
+        if ( $self->{short_tracks_seen} >= $self->{short_tracks_max_amount} ) {
             $self->{skip} = 0;
             $self->debug( 'not mixing' );
             return;
@@ -455,6 +456,8 @@ The following options can be specified:
     max_vol_before_mix_fraction     0.75        no
     min_audible_vol_fraction        0.005       no
     debug                           0           no
+    short_tracks_max_amount         2           no
+    short_track_max_seconds         10          no
 
 =head2 out_fh
 
@@ -542,3 +545,11 @@ Get the amount of played samples in the current track - this can be called from 
 
 Get the amount of elapsed seconds in the current track - in other words the current position in the track. This equals to get_elapsed_samples/sample_rate .
 
+=head2 short_tracks_max_amount
+
+    If too many really short tracks (like, jingles of only a few seconds) are mixed immediately after eachother, the stream slows down too much, resulting in buffer underruns for listeners. 
+    This sets the maximum amount of short tracks that will be mixed - after this amount of mixes, the next track will be started without mixing. 
+
+=head2 short_track_max_seconds
+    
+    Tracks shorter than this amount of seconds will be regarded as 'short'. 

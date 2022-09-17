@@ -89,6 +89,8 @@ channels_amount                 2           no
 max_vol_before_mix_fraction     0.75        no
 min_audible_vol_fraction        0.005       no
 debug                           0           no
+short_tracks_max_amount         2           no
+short_track_max_seconds         10          no
 ```
 
 ## out\_fh
@@ -145,7 +147,7 @@ When mixing 2 tracks, StreamGenerator needs to find out what the last loud sampl
 
 ## min\_audible\_vol\_fraction
 
-Audio softer than this volume fraction at the end of a track (and within the buffer) will be skipped. 
+Audio softer than this volume fraction at the end of a track (and within the buffer) will be skipped.
 
 ## debug
 
@@ -186,3 +188,16 @@ print "now at position $elapsed_seconds of the current track\r";
 ```
 
 Get the amount of elapsed seconds in the current track - in other words the current position in the track. This equals to get\_elapsed\_samples/sample\_rate .
+
+## short\_tracks\_max\_amount
+
+```
+If too many really short tracks (like, jingles of only a few seconds) are mixed immediately after eachother, the stream slows down too much, resulting in buffer underruns for listeners. 
+This sets the maximum amount of short tracks that will be mixed - after this amount of mixes, the next track will be started without mixing. 
+```
+
+## short\_track\_max\_seconds
+
+```
+Tracks shorter than this amount of seconds will be regarded as 'short'. 
+```
