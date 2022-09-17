@@ -106,8 +106,8 @@ sub mix {
     # user probably wants to switch to the new track a.s.a.p. 
     if ( $self->{skip} ) {
         my $to_shorten = @$buffer - ( $self->{skip_fade_seconds} * $self->{sample_rate} );
-        $self->debug( "shortening buffer by $to_shorten samples for skip..." );
-        splice @$buffer, -1 ,$to_shorten;
+        $self->debug( "shortening buffer by $to_shorten samples for skip..." . scalar(@$buffer) );
+        splice @$buffer, $to_shorten * -1;
     }
 
     # We're done with the old source
@@ -153,58 +153,71 @@ sub mix {
     my $to_skip = @$buffer - ($old_elapsed_samples - $self->{sample_rate} );
     push (@skipped_buffer, splice(@$buffer, 0, $to_skip) );
 
-    # Find the index of the last sample that is 'audible' (loud enough to hear) in the remaining buffer of the old source:
-    #
-    # The audio stream is a 'wave' expressed as a signed integer - so 0 is 'silence'. 
-    # Use abs() to compare samples with value < 0 with those > 0
-    #
-    my $index                  = 0;
-    my $last_audible_sample_index = -1;
-    my $audible_threshold      = MAXINT * $self->{min_audible_vol_fraction};
 
-
-    FIND_LAST_AUDIBLE: foreach my $index (reverse 0 .. @$buffer-1) {
-        my $sample = $buffer->[$index];
-        foreach (0 .. $self->{channels_amount}-1) {
-            my $single_sample = abs($sample->[$_]);
-            if ($single_sample >= $audible_threshold) {
-                $last_audible_sample_index = $index;
-                last FIND_LAST_AUDIBLE
+    # only worry about (in)audible and loud samples if we are not mixing for a 'skip' request
+    if (!$self->{skip}) {
+    
+        # Find the index of the last sample that is 'audible' (loud enough to hear) in the remaining buffer of the old source:
+        #
+        # The audio stream is a 'wave' expressed as a signed integer - so 0 is 'silence'. 
+        # Use abs() to compare samples with value < 0 with those > 0
+        #
+        my $last_audible_sample_index;
+        my $audible_threshold      = MAXINT * $self->{min_audible_vol_fraction};
+    
+        FIND_LAST_AUDIBLE: foreach my $index (reverse 0 .. @$buffer-1) {
+            my $sample = $buffer->[$index];
+            foreach (0 .. $self->{channels_amount}-1) {
+                my $single_sample = abs($sample->[$_]);
+                if ($single_sample >= $audible_threshold) {
+                    $last_audible_sample_index = $index;
+                    last FIND_LAST_AUDIBLE
+                }
             }
         }
-    }
-
-    $self->debug( "last audible sample index: $last_audible_sample_index of " . scalar( @$buffer ) );
-
-    # remove everything after the 'last audible' sample from the remaining buffer of the old source
-    # in other words, remove silence at the end of the track. 
-    my $silence_to_remove = @$buffer - ($last_audible_sample_index + 1);
-    splice @$buffer, -1, $silence_to_remove;
-
-
-    # We only want the mix to last normal_fade_seconds seconds. So skip the samples in the remaining old buffer source that are too much. 
-    $self->debug("buffer size before sizing down:" . scalar(@$buffer));
-    my $to_size_down = @$buffer - ($self->{normal_fade_seconds} * $self->{sample_rate});
-    push(@skipped_buffer, splice(@$buffer, 0, $to_size_down) );
-    $self->debug("buffer size after sizing down:". scalar(@$buffer));
-
-
-    # Find the index of the last sample that is 'loud' (too loud to mix) in the remaining buffer of the old source.
-    $index                  = 0;
-    my $last_loud_sample_index = -1;
-    my $loud_threshold         = MAXINT * $self->{max_vol_before_mix_fraction};
-    FIND_LAST_LOUD: foreach my $index (reverse 0 .. @$buffer-1) {
-        my $sample = $buffer->[$index];
-        foreach (0 .. $self->{channels_amount}-1) {
-            my $single_sample = abs($sample->[$_]);
-            if ( $single_sample >= $loud_threshold ) {
-                $last_loud_sample_index = $index;
-                last FIND_LAST_LOUD
+    
+        if (defined $last_audible_sample_index) {
+            $self->debug( "last audible sample index: $last_audible_sample_index of " . scalar( @$buffer ) );
+    
+            # remove everything after the 'last audible' sample from the remaining buffer of the old source
+            # in other words, remove silence at the end of the track. 
+            my $silence_to_remove = @$buffer - ($last_audible_sample_index + 1);
+            splice @$buffer, -1 * $silence_to_remove;
+        }
+        else {
+            $self->debug( "no inaudible samples in buffer");
+        }
+    
+        # We only want the mix to last normal_fade_seconds seconds. So skip the samples in the remaining old buffer source that are too much. 
+        $self->debug("buffer size before sizing down:" . scalar(@$buffer));
+        my $to_size_down = @$buffer - ($self->{normal_fade_seconds} * $self->{sample_rate});
+        push(@skipped_buffer, splice(@$buffer, 0, $to_size_down) );
+        $self->debug("buffer size after sizing down:". scalar(@$buffer));
+    
+    
+        # Find the index of the last sample that is 'loud' (too loud to mix) in the remaining buffer of the old source.
+        my $last_loud_sample_index;
+        my $loud_threshold         = MAXINT * $self->{max_vol_before_mix_fraction};
+        FIND_LAST_LOUD: foreach my $index (reverse 0 .. @$buffer-1) {
+            my $sample = $buffer->[$index];
+            foreach (0 .. $self->{channels_amount}-1) {
+                my $single_sample = abs($sample->[$_]);
+                if ( $single_sample >= $loud_threshold ) {
+                    $last_loud_sample_index = $index;
+                    last FIND_LAST_LOUD
+                }
             }
         }
-    }
+    
+        if (defined $last_loud_sample_index) {
+            $self->debug( "last loud sample index: $last_loud_sample_index of " . scalar( @$buffer ) );
+            push(@skipped_buffer, splice(@$buffer, 0, $last_loud_sample_index));
+        }
+        else {
+            $self->debug( "no loud samples in the old track");
+        }
 
-    $self->debug( "last loud sample index: $last_loud_sample_index of " . scalar( @$buffer ) );
+    }
 
     # get as many samples from the new source as we have left from the old source,
     # or in case of a very short new track, as many as possible. 
@@ -214,7 +227,7 @@ sub mix {
 
     my @max   = (0) x $self->{channels_amount};
     my $total = @$buffer;
-    $index = -1;
+    my $index = -1;
 
     # Loop over the remaining samples in the buffer of the old source
     foreach my $sample (@$buffer) {
@@ -226,16 +239,6 @@ sub mix {
         my $full_second;
         if ( !( $index % $self->{sample_rate} ) ) {
             $full_second = $index / $self->{sample_rate};
-        }
-
-        # If we are not mixing because of a 'skip' request, so if this is a 'normal'
-        # mix between two tracks, we need to wait with mixing until we are past the 
-        # last 'loud' sample. 
-        if ( !$self->{skip} && $index <= $last_loud_sample_index ) {
-            if ( defined($full_second) ) {
-                $self->debug( "skipping second $full_second..." );
-            }
-            next;
         }
 
         if ( defined $full_second ) {
