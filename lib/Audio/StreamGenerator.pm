@@ -84,7 +84,7 @@ sub get_streamer {
         my $diff = @{ $self->{buffer} } - $needed;
 
         if ($diff < 0) {
-            $eof = 1 unless $self->_get_samples($self->{sample_rate});
+            $eof = 1 unless $self->_get_samples($self->{sample_rate}, $self->{buffer});
         }
         else {
             $self->_send_samples($self->{sample_rate});
@@ -136,9 +136,7 @@ sub mix {
         $self->debug( 'mixing' );
     }
 
-    # make the buffer mixable
-    @$buffer = map { $self->_unpack_sample($_) } @$buffer;
-
+    $self->_make_mixable($buffer);
 
     # In case the old track was very short (a few seconds, shorter than the current buffer we are trying to mix),
     # there may still be audio from the previous old track in the buffer. 
@@ -189,11 +187,8 @@ sub mix {
     # get as many samples from the new source as we have left from the old source,
     # or in case of a very short new track, as many as possible. 
     my @new_buffer;
-    while ( @new_buffer < @$buffer ) {
-        my $sample = $self->_unpack_sample($self->_get_sample);
-        last if !defined($sample);
-        push( @new_buffer, $sample );
-    }
+    $self->_get_samples(scalar @$buffer, \@new_buffer);
+    $self->_make_mixable(\@new_buffer);
 
     my @max   = (0) x $self->{channels_amount};
     my $total = @$buffer;
@@ -285,6 +280,11 @@ sub mix {
     $self->{skip} = 0;
 }
 
+sub _make_mixable {
+    my ($self, $buffer) = @_;
+    @$buffer = map { $self->_unpack_sample($_) } @$buffer;
+}
+
 
 sub stream {
     my $self = shift;
@@ -303,18 +303,6 @@ sub get_elapsed_samples {
 sub get_elapsed_seconds {
     my $self = shift;
     return $self->{elapsed} / $self->{sample_rate};
-}
-
-sub _send_one_sample {
-    my $self   = shift;
-    my $sample = shift @{ $self->{buffer} };
-    my $fh     = $self->{out_fh};
-
-    if ( ref $sample eq 'ARRAY' ) {
-        print $fh map { pack 's*', $_ } @$sample;
-    } else {
-        print $fh $sample;
-    }
 }
 
 sub _send_samples {
@@ -340,26 +328,8 @@ sub _unpack_sample {
     return [unpack 's*', $sample];
 }
 
-sub _get_sample {
-    my $self = shift;
-
-    my $data;
-    my $bytes = $self->{channels_amount} * 2;
-    my $len   = read( $self->{source}, $data, $bytes );
-
-    return if $len == 0;
-    $self->{elapsed}++;
-
-    if ( $len != $bytes ) {
-        # pack's "s" is 16 bit unsigned, so we need two bytes
-        $data = "\x00\x00" x $bytes ;
-    }
-
-    return $data;
-}
-
 sub _get_samples {
-    my ($self, $count) = @_;
+    my ($self, $count, $dest) = @_;
     return 1 unless $count;
 
     my $data;
@@ -376,7 +346,7 @@ sub _get_samples {
     $self->{elapsed} += ( $len / $bytes_div);
 
     while ($data) {
-        push @{ $self->{buffer} }, substr $data, 0, $bytes_div, '';
+        push @$dest, substr $data, 0, $bytes_div, '';
     }
 
     return $len;
