@@ -142,7 +142,7 @@ sub mix {
     # Open the new track. We are not going to read from it yet, but opening it now may give the child process some time to start up. 
     $self->{source} = $self->_do_get_new_source();
 
-    # Find the index of the last sample that is 'audible' (loud enough to hear) in the remaining buffer of the old source:
+    # Find the index of the last sample that is 'audible' (loud enough to hear) in the remaining buffer of the old source.
     #
     # The audio stream is a 'wave' expressed as a signed integer - so 0 is 'silence'. 
     # Use abs() to compare samples with value < 0 with those > 0
@@ -250,7 +250,7 @@ sub mix {
     # Volume adjustment
     #
     # In case there are any samples in the "mixed buffer" that are louder than MAXINT, 
-    # lower the volume of the *whole* buffer just enough to make sure it stays within the limits. 
+    # lower the volume of the *whole* buffer just enough that it will stay within the limits. 
     # To minimise audible impact, this happens for each channel separately. 
     #
     # This is a bit of a naive approach - in theory this could lead to an audible drop in volume 
