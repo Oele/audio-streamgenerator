@@ -168,7 +168,8 @@ sub mix {
         splice @$buffer, -1 * $silence_to_remove, $silence_to_remove;
     }
     else {
-        $self->debug( "no inaudible samples in buffer");
+        $self->debug( "no audible samples in buffer?!");
+        @$buffer = ();
     }
 
     # We only want the mix to last normal_fade_seconds seconds. So skip the samples in the remaining old buffer source that are too much. 
