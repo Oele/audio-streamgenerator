@@ -207,8 +207,8 @@ sub mix {
     $self->_get_samples(scalar @$buffer, \@new_buffer);
     $self->_make_mixable(\@new_buffer);
 
-    # If the new track is shorter than the remaining buffer of the old track (so only a few seconds),
-    # skip the extra samples in the old buffer. 
+    # If the new track is shorter than the remaining buffer of the old track 
+    # (so the new track is only a few seconds long), skip the extra samples in the old buffer. 
     # This prevents situations where we play a very short jingle and then hear another
     # few remaining seconds of the 'old' track.
     if (@$buffer > @new_buffer) {
