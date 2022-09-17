@@ -175,7 +175,7 @@ sub mix {
     # We only want the mix to last normal_fade_seconds seconds. So skip the samples in the remaining old buffer that are too much. 
     $self->debug("buffer size before sizing down:" . scalar(@$buffer));
     my $to_size_down = @$buffer - ($self->{normal_fade_seconds} * $self->{sample_rate});
-    push(@skipped_buffer, splice(@$buffer, 0, $to_size_down) if $to_size_down > 0;
+    push(@skipped_buffer, splice(@$buffer, 0, $to_size_down) ) if $to_size_down > 0;
     $self->debug("buffer size after sizing down:". scalar(@$buffer));
 
 
