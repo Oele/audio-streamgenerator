@@ -96,14 +96,16 @@ sub get_streamer {
 sub mix {
     my $self = shift;
 
+    my $buffer = $self->{buffer};
+
     # In case of a requested 'skip', we need to remove a few seconds from the end of the (old) buffer because 
     # we want a 'skip' mix to be shorter than a normal mix between 2 tracks - both because we 
     # are still in the middle of the old song, so the mix does not sound 'natural' - and because the 
     # user probably wants to switch to the new track a.s.a.p. 
     if ( $self->{skip} ) {
         $self->debug( 'shortening buffer for skip...' );
-        pop @{ $self->{buffer} }
-            while @{ $self->{buffer} } > ( $self->{skip_fade_seconds} * $self->{sample_rate} );
+        pop @$buffer
+            while @$buffer > ( $self->{skip_fade_seconds} * $self->{sample_rate} );
     }
 
     # We're done with the old source
@@ -135,7 +137,7 @@ sub mix {
     }
 
     # make the buffer mixable
-    @{ $self->{buffer} } = map { $self->_unpack_sample($_) } @{ $self->{buffer} };
+    @$buffer = map { $self->_unpack_sample($_) } @$buffer;
 
 
     # In case the old track was very short (a few seconds, shorter than the current buffer we are trying to mix),
@@ -148,8 +150,8 @@ sub mix {
     # Can result in the new song starting before the jingle.
 
     my @skipped_buffer;
-    push (@skipped_buffer, shift @{ $self->{buffer} })
-        while ( @{ $self->{buffer} } && @{ $self->{buffer} } > ($old_elapsed_samples - $self->{sample_rate} ) );
+    push (@skipped_buffer, shift @$buffer)
+        while ( @$buffer && @$buffer > ($old_elapsed_samples - $self->{sample_rate} ) );
 
 
     # Find in the remaining buffer of the old source:
@@ -164,7 +166,7 @@ sub mix {
     my $last_audible_sample_index = -1;
     my $loud_threshold         = MAXINT * $self->{max_vol_before_mix_fraction};
     my $audible_threshold      = MAXINT * $self->{min_audible_vol_fraction};
-    foreach my $sample ( @{ $self->{buffer} } ) {
+    foreach my $sample ( @$buffer ) {
         foreach (0 .. $self->{channels_amount}-1) {
             my $single_sample = abs($sample->[$_]);
             if ( $single_sample >= $loud_threshold ) {
@@ -177,28 +179,28 @@ sub mix {
         $index++;
     }
 
-    $self->debug( "last loud sample index: $last_loud_sample_index of " . scalar( @{ $self->{buffer} } ) );
-    $self->debug( "last audible sample index: $last_audible_sample_index of " . scalar( @{ $self->{buffer} } ) );
+    $self->debug( "last loud sample index: $last_loud_sample_index of " . scalar( @$buffer ) );
+    $self->debug( "last audible sample index: $last_audible_sample_index of " . scalar( @$buffer ) );
 
     # remove everything after the 'last audible' sample from the remaining buffer of the old source
     # in other words, remove silence at the end of the track. 
-    pop @{ $self->{buffer} } while @{ $self->{buffer} } > ($last_audible_sample_index + 1);
+    pop @$buffer while @$buffer > ($last_audible_sample_index + 1);
 
     # get as many samples from the new source as we have left from the old source,
     # or in case of a very short new track, as many as possible. 
     my @new_buffer;
-    while ( @new_buffer < @{ $self->{buffer} } ) {
+    while ( @new_buffer < @$buffer ) {
         my $sample = $self->_unpack_sample($self->_get_sample);
         last if !defined($sample);
         push( @new_buffer, $sample );
     }
 
     my @max   = (0) x $self->{channels_amount};
-    my $total = @{ $self->{buffer} };
+    my $total = @$buffer;
     $index = -1;
 
     # Loop over the remaining samples in the buffer of the old source
-    foreach my $sample (@{ $self->{buffer} }) {
+    foreach my $sample (@$buffer) {
         $index++;
         my $togo = $total - $index;
 
@@ -255,10 +257,10 @@ sub mix {
     }
 
     # If, after mixing, there are any unused samples of the new track left in memory, add them to the end of the buffer. 
-    push( @{ $self->{buffer} }, @new_buffer );
+    push( @$buffer, @new_buffer );
 
     # re-add the samples we may have skipped before mixing to the beginning of the buffer.
-    unshift( @{ $self->{buffer} }, @skipped_buffer );
+    unshift( @$buffer, @skipped_buffer );
 
     # Volume adjustment
     #
@@ -274,7 +276,7 @@ sub mix {
     foreach my $channel ( grep { $max[$_] > MAXINT } (0 .. $self->{channels_amount}-1) ) {
         $self->debug( "channel $channel needs volume adjustment" );
 
-        foreach my $sample ( @{ $self->{buffer} } ) {
+        foreach my $sample ( @$buffer ) {
             $sample->[$channel] =
                 ( $sample->[$channel] / $max[$channel] ) * MAXINT;
         }
