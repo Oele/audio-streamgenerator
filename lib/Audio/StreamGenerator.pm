@@ -99,6 +99,9 @@ sub mix {
     # We're done with the old source
     close( $self->{source} );
 
+    # Open the new track
+    $self->{source} = $self->_do_get_new_source();
+
     $self->_make_mixable($buffer);
 
     # In case of a requested 'skip', we need to remove a few seconds from the end of the (old) buffer because 
@@ -137,9 +140,6 @@ sub mix {
     my @skipped_buffer;
     my $to_skip = @$buffer - ($self->{elapsed} - $self->{sample_rate} );
     push (@skipped_buffer, splice(@$buffer, 0, $to_skip) );
-
-    # Open the new track
-    $self->{source} = $self->_do_get_new_source();
 
     # Find the index of the last sample that is 'audible' (loud enough to hear) in the remaining buffer of the old source:
     #
