@@ -236,7 +236,8 @@ sub mix {
         my $togo = $total - $index;
 
         # only log at full seconds - don't flood the log
-        if ( !( $index % $self->{sample_rate} ) ) {
+        if ( defined $self->{debug} && !( $index % $self->{sample_rate} ) ) {
+            my $full_second = $index / $self->{sample_rate};
             $self->debug( "mixing second $full_second..." );
         }
 
