@@ -140,7 +140,7 @@ sub mix {
         push (@skipped_buffer, splice(@$buffer, 0, $to_skip) ) if $to_skip > 0;
     }    
 
-    # Open the new track
+    # Open the new track. We are not going to read from it yet, but opening it now may give the child process some time to start up. 
     $self->{source} = $self->_do_get_new_source();
 
     # Find the index of the last sample that is 'audible' (loud enough to hear) in the remaining buffer of the old source:
