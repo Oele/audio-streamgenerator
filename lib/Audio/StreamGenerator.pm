@@ -166,8 +166,7 @@ sub mix {
 
         # remove everything after the 'last audible' sample from the remaining buffer of the old source
         # in other words, remove silence at the end of the track. 
-        my $silence_to_remove = @$buffer - ($last_audible_sample_index + 1);
-        splice @$buffer, -1 * $silence_to_remove, $silence_to_remove;
+        splice @$buffer, $last_audible_sample_index + 1
     }
     else {
         $self->debug( "no audible samples in buffer?! - buffer size is " . scalar(@$buffer));
