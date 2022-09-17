@@ -153,6 +153,19 @@ Audio softer than this volume fraction at the end of a track (and within the buf
 
 Log debugging information. If the value is a code reference, the logs will be passed to that sub. Otherwise the value will be treated as a boolean. If true, logs will be printed to STDERR . 
 
+## short\_tracks\_max\_amount
+
+```
+If too many really short tracks (like, jingles of only a few seconds) are mixed immediately after eachother, the stream slows down too much, resulting in buffer underruns for listeners. 
+This sets the maximum amount of short tracks that will be mixed - after this amount of mixes, the next track will be started without mixing. 
+```
+
+## short\_track\_max\_seconds
+
+```
+Tracks shorter than this amount of seconds will be regarded as 'short'. 
+```
+
 # METHODS
 
 ## stream
@@ -188,16 +201,3 @@ print "now at position $elapsed_seconds of the current track\r";
 ```
 
 Get the amount of elapsed seconds in the current track - in other words the current position in the track. This equals to get\_elapsed\_samples/sample\_rate .
-
-## short\_tracks\_max\_amount
-
-```
-If too many really short tracks (like, jingles of only a few seconds) are mixed immediately after eachother, the stream slows down too much, resulting in buffer underruns for listeners. 
-This sets the maximum amount of short tracks that will be mixed - after this amount of mixes, the next track will be started without mixing. 
-```
-
-## short\_track\_max\_seconds
-
-```
-Tracks shorter than this amount of seconds will be regarded as 'short'. 
-```
