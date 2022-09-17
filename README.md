@@ -83,6 +83,7 @@ out_fh                          -           yes
 get_new_source                  -           yes
 run_every_second                -           no
 normal_fade_seconds             5           no
+buffer_length_seconds           10          no
 skip_fade_seconds               3           no
 sample_rate                     44100       no
 channels_amount                 2           no
@@ -127,6 +128,10 @@ This sub will be run after each second of playback, with the StreamGenerator obj
 ## normal\_fade\_seconds
 
 Amount of seconds that we want tracks to overlap. This is only the initial/max value - the mixing algorithm may decide to mix less seconds if the old track ends with loud samples.
+
+## buffer\_length\_seconds
+
+Amount of seconds of the current track to keep in the buffer. Having this set to a higher value than normal\_fade\_seconds will ensure that there will be enough audio left to mix after removing silence at the end of the old track. 
 
 ## skip\_fade\_seconds
 

@@ -25,6 +25,7 @@ sub new {
     my ( $class, %args ) = @_;
 
     my %defaults = (
+        buffer_length_seconds       => 10,
         normal_fade_seconds         => 5,
         skip_fade_seconds           => 3,
         sample_rate                 => 44100,
@@ -81,7 +82,7 @@ sub get_streamer {
             $self->mix();
         }
 
-        my $needed = $self->{normal_fade_seconds} * $self->{sample_rate};
+        my $needed = $self->{buffer_length_seconds} * $self->{sample_rate};
         my $diff = @{ $self->{buffer} } - $needed;
 
         if ($diff < 0) {
@@ -153,24 +154,17 @@ sub mix {
         while ( @$buffer && @$buffer > ($old_elapsed_samples - $self->{sample_rate} ) );
 
 
-    # Find in the remaining buffer of the old source:
-    # - the index of the last sample that is 'loud' (too loud to mix);
-    # - the index of the last sample that is 'audible' (loud enough to hear - the samples after this one can be thrown away);
+    # Find the index of the last sample that is 'audible' (loud enough to hear) in the remaining buffer of the old source:
     #
     # The audio stream is a 'wave' expressed as a signed integer - so 0 is 'silence'. 
     # Use abs() to compare samples with value < 0 with those > 0
     #
     my $index                  = 0;
-    my $last_loud_sample_index = -1;
     my $last_audible_sample_index = -1;
-    my $loud_threshold         = MAXINT * $self->{max_vol_before_mix_fraction};
     my $audible_threshold      = MAXINT * $self->{min_audible_vol_fraction};
     foreach my $sample ( @$buffer ) {
         foreach (0 .. $self->{channels_amount}-1) {
             my $single_sample = abs($sample->[$_]);
-            if ( $single_sample >= $loud_threshold ) {
-                $last_loud_sample_index = $index;
-            }
             if ($single_sample >= $audible_threshold) {
                 $last_audible_sample_index = $index;
             }
@@ -178,12 +172,34 @@ sub mix {
         $index++;
     }
 
-    $self->debug( "last loud sample index: $last_loud_sample_index of " . scalar( @$buffer ) );
     $self->debug( "last audible sample index: $last_audible_sample_index of " . scalar( @$buffer ) );
 
     # remove everything after the 'last audible' sample from the remaining buffer of the old source
     # in other words, remove silence at the end of the track. 
     pop @$buffer while @$buffer > ($last_audible_sample_index + 1);
+
+
+    # We only want the mix to last normal_fade_seconds seconds. So skip the samples in the remaining old buffer source that are too much. 
+    $self->debug("buffer size before sizing down:" . scalar(@$buffer));
+    push(@skipped_buffer, shift @$buffer) while @$buffer > ($self->{normal_fade_seconds} * $self->{sample_rate});
+    $self->debug("buffer size after sizing down:". scalar(@$buffer));
+
+
+    # Find the index of the last sample that is 'loud' (too loud to mix) in the remaining buffer of the old source.
+    $index                  = 0;
+    my $last_loud_sample_index = -1;
+    my $loud_threshold         = MAXINT * $self->{max_vol_before_mix_fraction};
+    foreach my $sample ( @$buffer ) {
+        foreach (0 .. $self->{channels_amount}-1) {
+            my $single_sample = abs($sample->[$_]);
+            if ( $single_sample >= $loud_threshold ) {
+                $last_loud_sample_index = $index;
+            }
+        }
+        $index++;
+    }
+
+    $self->debug( "last loud sample index: $last_loud_sample_index of " . scalar( @$buffer ) );
 
     # get as many samples from the new source as we have left from the old source,
     # or in case of a very short new track, as many as possible. 
@@ -450,6 +466,7 @@ The following options can be specified:
     get_new_source                  -           yes
     run_every_second                -           no
     normal_fade_seconds             5           no
+    buffer_length_seconds           10          no
     skip_fade_seconds               3           no
     sample_rate                     44100       no
     channels_amount                 2           no
@@ -491,6 +508,10 @@ This sub will be run after each second of playback, with the StreamGenerator obj
 =head2 normal_fade_seconds
 
 Amount of seconds that we want tracks to overlap. This is only the initial/max value - the mixing algorithm may decide to mix less seconds if the old track ends with loud samples.
+
+=head2 buffer_length_seconds
+
+Amount of seconds of the current track to keep in the buffer. Having this set to a higher value than normal_fade_seconds will ensure that there will be enough audio left to mix after removing silence at the end of the old track. 
 
 =head2 skip_fade_seconds
 
