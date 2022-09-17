@@ -155,16 +155,12 @@ Log debugging information. If the value is a code reference, the logs will be pa
 
 ## short\_tracks\_max\_amount
 
-```
 If too many really short tracks (like, jingles of only a few seconds) are mixed immediately after eachother, the stream slows down too much, resulting in buffer underruns for listeners. 
 This sets the maximum amount of short tracks that will be mixed - after this amount of mixes, the next track will be started without mixing. 
-```
 
 ## short\_track\_max\_seconds
 
-```
 Tracks shorter than this amount of seconds will be regarded as 'short'. 
-```
 
 # METHODS
 
