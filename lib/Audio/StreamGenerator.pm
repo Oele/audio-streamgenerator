@@ -162,14 +162,17 @@ sub mix {
     my $index                  = 0;
     my $last_audible_sample_index = -1;
     my $audible_threshold      = MAXINT * $self->{min_audible_vol_fraction};
-    foreach my $sample ( @$buffer ) {
+
+
+    FIND_LAST_AUDIBLE: foreach my $index (reverse 0 .. @$buffer-1) {
+        my $sample = $buffer->[$index];
         foreach (0 .. $self->{channels_amount}-1) {
             my $single_sample = abs($sample->[$_]);
             if ($single_sample >= $audible_threshold) {
                 $last_audible_sample_index = $index;
+                last FIND_LAST_AUDIBLE
             }
         }
-        $index++;
     }
 
     $self->debug( "last audible sample index: $last_audible_sample_index of " . scalar( @$buffer ) );
@@ -189,14 +192,15 @@ sub mix {
     $index                  = 0;
     my $last_loud_sample_index = -1;
     my $loud_threshold         = MAXINT * $self->{max_vol_before_mix_fraction};
-    foreach my $sample ( @$buffer ) {
+    FIND_LAST_LOUD: foreach my $index (reverse 0 .. @$buffer-1) {
+        my $sample = $buffer->[$index];
         foreach (0 .. $self->{channels_amount}-1) {
             my $single_sample = abs($sample->[$_]);
             if ( $single_sample >= $loud_threshold ) {
                 $last_loud_sample_index = $index;
+                last FIND_LAST_LOUD
             }
         }
-        $index++;
     }
 
     $self->debug( "last loud sample index: $last_loud_sample_index of " . scalar( @$buffer ) );
