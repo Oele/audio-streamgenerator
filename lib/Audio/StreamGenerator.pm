@@ -112,9 +112,8 @@ sub mix {
         # Also, fade out the old track.
         #
         $self->{skip} = 0;
-        my $to_shorten = @$buffer - ( $self->{skip_fade_seconds} * $self->{sample_rate} );
-        $self->debug( "shortening buffer by $to_shorten samples for skip..." . scalar(@$buffer) );
-        splice @$buffer, $to_shorten * -1, $to_shorten;
+        $self->debug( "shortening buffer for skip..." . scalar(@$buffer) );
+        splice @$buffer, ( $self->{skip_fade_seconds} * $self->{sample_rate} );
 
         my $index = 0;
         foreach my $sample (@$buffer) {
