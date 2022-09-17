@@ -208,10 +208,11 @@ sub mix {
                 }
             }
         }
-    
+
+        # Skip everything up to and including the last loud sample    
         if (defined $last_loud_sample_index) {
             $self->debug( "last loud sample index: $last_loud_sample_index of " . scalar( @$buffer ) );
-            push(@skipped_buffer, splice(@$buffer, 0, $last_loud_sample_index));
+            push(@skipped_buffer, splice(@$buffer, 0, $last_loud_sample_index + 1));
         }
         else {
             $self->debug( "no loud samples in the old track");
@@ -234,14 +235,8 @@ sub mix {
         $index++;
         my $togo = $total - $index;
 
-        # check whether we're at a 'full second' - only useful for logging
-        # because we don't want to flood the log with a line for each sample.
-        my $full_second;
+        # only log at full seconds - don't flood the log
         if ( !( $index % $self->{sample_rate} ) ) {
-            $full_second = $index / $self->{sample_rate};
-        }
-
-        if ( defined $full_second ) {
             $self->debug( "mixing second $full_second..." );
         }
 
@@ -252,7 +247,6 @@ sub mix {
                 $single_sample *= $fraction;
             }
         }
-
 
         # Do the actual mix: simply add up the values of the samples of the old & new track. 
         #
