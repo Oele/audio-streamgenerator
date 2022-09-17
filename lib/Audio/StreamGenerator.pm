@@ -100,6 +100,9 @@ sub mix {
 
     my $buffer = $self->{buffer};
 
+    # We're done with the old source
+    close( $self->{source} );
+
     $self->_make_mixable($buffer);
 
     # In case of a requested 'skip', we need to remove a few seconds from the end of the (old) buffer because 
@@ -113,7 +116,7 @@ sub mix {
         $self->{skip} = 0;
         my $to_shorten = @$buffer - ( $self->{skip_fade_seconds} * $self->{sample_rate} );
         $self->debug( "shortening buffer by $to_shorten samples for skip..." . scalar(@$buffer) );
-        splice @$buffer, $to_shorten * -1;
+        splice @$buffer, $to_shorten * -1, $to_shorten;
 
         my $index = 0;
         foreach my $sample (@$buffer) {
@@ -125,9 +128,6 @@ sub mix {
             $index++;
         }
     }
-
-    # We're done with the old source
-    close( $self->{source} );
 
     # Store how many samples/seconds were played in the old song because we need it later on
     my $old_elapsed_samples = $self->{elapsed};
@@ -192,7 +192,7 @@ sub mix {
         # remove everything after the 'last audible' sample from the remaining buffer of the old source
         # in other words, remove silence at the end of the track. 
         my $silence_to_remove = @$buffer - ($last_audible_sample_index + 1);
-        splice @$buffer, -1 * $silence_to_remove;
+        splice @$buffer, -1 * $silence_to_remove, $silence_to_remove;
     }
     else {
         $self->debug( "no inaudible samples in buffer");
