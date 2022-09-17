@@ -135,7 +135,7 @@ sub mix {
         # old song -> very short jingle -> new song
         # Can result in the new song starting before the jingle.
     
-        my $to_skip = @$buffer - ($self->{elapsed} - $self->{sample_rate} );
+        my $to_skip = @$buffer - $self->{elapsed};
         push (@skipped_buffer, splice(@$buffer, 0, $to_skip) ) if $to_skip > 0;
     }    
 
