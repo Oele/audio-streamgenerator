@@ -105,9 +105,9 @@ sub mix {
     # are still in the middle of the old song, so the mix does not sound 'natural' - and because the 
     # user probably wants to switch to the new track a.s.a.p. 
     if ( $self->{skip} ) {
-        $self->debug( 'shortening buffer for skip...' );
-        pop @$buffer
-            while @$buffer > ( $self->{skip_fade_seconds} * $self->{sample_rate} );
+        my $to_shorten = @$buffer - ( $self->{skip_fade_seconds} * $self->{sample_rate} );
+        $self->debug( "shortening buffer by $to_shorten samples for skip..." );
+        splice @$buffer, -1 ,$to_shorten;
     }
 
     # We're done with the old source
@@ -150,9 +150,8 @@ sub mix {
     # Can result in the new song starting before the jingle.
 
     my @skipped_buffer;
-    push (@skipped_buffer, shift @$buffer)
-        while ( @$buffer && @$buffer > ($old_elapsed_samples - $self->{sample_rate} ) );
-
+    my $to_skip = @$buffer - ($old_elapsed_samples - $self->{sample_rate} );
+    push (@skipped_buffer, splice(@$buffer, 0, $to_skip) );
 
     # Find the index of the last sample that is 'audible' (loud enough to hear) in the remaining buffer of the old source:
     #
@@ -179,12 +178,14 @@ sub mix {
 
     # remove everything after the 'last audible' sample from the remaining buffer of the old source
     # in other words, remove silence at the end of the track. 
-    pop @$buffer while @$buffer > ($last_audible_sample_index + 1);
+    my $silence_to_remove = @$buffer - ($last_audible_sample_index + 1);
+    splice @$buffer, -1, $silence_to_remove;
 
 
     # We only want the mix to last normal_fade_seconds seconds. So skip the samples in the remaining old buffer source that are too much. 
     $self->debug("buffer size before sizing down:" . scalar(@$buffer));
-    push(@skipped_buffer, shift @$buffer) while @$buffer > ($self->{normal_fade_seconds} * $self->{sample_rate});
+    my $to_size_down = @$buffer - ($self->{normal_fade_seconds} * $self->{sample_rate});
+    push(@skipped_buffer, splice(@$buffer, 0, $to_size_down) );
     $self->debug("buffer size after sizing down:". scalar(@$buffer));
 
 
