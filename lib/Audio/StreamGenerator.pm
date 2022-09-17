@@ -101,14 +101,16 @@ sub mix {
 
     $self->_make_mixable($buffer);
 
-    # In case of a requested 'skip', we need to remove a few seconds from the end of the (old) buffer because 
-    # we want a 'skip' mix to be shorter than a normal mix between 2 tracks - both because we 
-    # are still in the middle of the old song, so the mix does not sound 'natural' - and because the 
-    # user probably wants to switch to the new track a.s.a.p. 
-    #
-    # Also, fade out the old track.
-    #
+    my @skipped_buffer;
+
     if ( $self->{skip} ) {
+        # In case of a requested 'skip', we need to remove a few seconds from the end of the (old) buffer because 
+        # we want a 'skip' mix to be shorter than a normal mix between 2 tracks - both because we 
+        # are still in the middle of the old song, so the mix does not sound 'natural' - and because the 
+        # user probably wants to switch to the new track a.s.a.p. 
+        #
+        # Also, fade out the old track.
+        #
         $self->{skip} = 0;
         my $to_shorten = @$buffer - ( $self->{skip_fade_seconds} * $self->{sample_rate} );
         $self->debug( "shortening buffer by $to_shorten samples for skip..." . scalar(@$buffer) );
@@ -124,19 +126,19 @@ sub mix {
             $index++;
         }
     }
-
-    # In case the old track was very short (a few seconds, shorter than the current buffer we are trying to mix),
-    # there may still be audio from the previous old track in the buffer. 
-    # In this case, skip to the beginning of the current old track, and keep the 'skipped' samples in @skipped_buffer, 
-    # so we can re-add them to the beginning of the buffer after mixing is done.
-    #
-    # If we don't do this, this sequence:
-    # old song -> very short jingle -> new song
-    # Can result in the new song starting before the jingle.
-
-    my @skipped_buffer;
-    my $to_skip = @$buffer - ($self->{elapsed} - $self->{sample_rate} );
-    push (@skipped_buffer, splice(@$buffer, 0, $to_skip) );
+    else {
+        # In case the old track was very short (a few seconds, shorter than the current buffer we are trying to mix),
+        # there may still be audio from the previous old track in the buffer. 
+        # In this case, skip to the beginning of the current old track, and keep the 'skipped' samples in @skipped_buffer, 
+        # so we can re-add them to the beginning of the buffer after mixing is done.
+        #
+        # If we don't do this, this sequence:
+        # old song -> very short jingle -> new song
+        # Can result in the new song starting before the jingle.
+    
+        my $to_skip = @$buffer - ($self->{elapsed} - $self->{sample_rate} );
+        push (@skipped_buffer, splice(@$buffer, 0, $to_skip) ) if $to_skip > 0;
+    }    
 
     # Open the new track
     $self->{source} = $self->_do_get_new_source();
