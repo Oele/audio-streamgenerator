@@ -223,7 +223,6 @@ sub mix {
     # Loop over the remaining samples in the buffer of the old source
     foreach my $sample (@$buffer) {
         $index++;
-        my $togo = $total - $index;
 
         # only log at full seconds - don't flood the log
         if ( defined $self->{debug} && !( $index % $self->{sample_rate} ) ) {
@@ -244,8 +243,7 @@ sub mix {
         }
     }
 
-    # If, after mixing, there are any unused samples of the new track left in memory, add them to the end of the buffer. 
-    push( @$buffer, @new_buffer );
+    croak "unused samples left in the buffer of the new track after mixing - this should never happen!" if @new_buffer;
 
     # re-add the samples we may have skipped before mixing to the beginning of the buffer.
     unshift( @$buffer, @skipped_buffer );
