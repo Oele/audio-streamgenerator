@@ -297,15 +297,23 @@ sub _send_samples {
     my ($self, $count) = @_;
     return unless $count;
 
-    my @samples = map {
-        my $sample = $_;
-        ref $sample eq 'ARRAY'
-            ? map { pack 's', $_ } @$sample
-            : $sample
-            ;
-    } splice @{ $self->{buffer} }, 0, $count;
+    my @samples = $self->_pack_samples(splice @{ $self->{buffer} }, 0, $count);
 
     print {$self->{out_fh}} @samples;
+}
+
+sub _pack_samples {
+    my ($self, @samples) = @_;
+
+    return map { $self->_pack_sample($_) } @samples;
+}
+
+sub _pack_sample {
+    my ($self, $sample) = @_;
+
+    return map { pack 's', $_ } @$sample
+        if ref $sample eq 'ARRAY';
+    return $sample;
 }
 
 sub _unpack_sample {
