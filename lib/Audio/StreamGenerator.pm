@@ -241,6 +241,7 @@ sub mix {
         }
     }
 
+    $self->debug( "done mixing" );
     croak "unused samples left in the buffer of the new track after mixing - this should never happen!" if @new_buffer;
 
     # re-add the samples we may have skipped before mixing to the beginning of the buffer.
