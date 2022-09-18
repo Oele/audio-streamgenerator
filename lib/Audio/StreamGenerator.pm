@@ -76,7 +76,7 @@ sub get_streamer {
         $eof = eof( $self->{source} ) unless defined $eof;
         if ( $eof || $self->{skip} ) {
             $eof = undef;
-            $self->mix();
+            $self->_mix();
         }
 
         my $needed = $self->{buffer_length_seconds} * $self->{sample_rate};
@@ -99,7 +99,7 @@ sub get_streamer {
     };
 }
 
-sub mix {
+sub _mix {
     my $self = shift;
 
     my $buffer = $self->{buffer};
