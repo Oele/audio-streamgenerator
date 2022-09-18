@@ -33,7 +33,6 @@ sub new {
         max_vol_before_mix_fraction => 0.75,
         min_audible_vol_fraction    => 0.005,
         debug                       => 0,
-        samples_batch               => 5000,
     );
 
     my @mandatory_keys = qw (
@@ -104,10 +103,10 @@ sub mix {
     my @skipped_buffer;
 
     if ( $self->{skip} ) {
-        # In case of a requested 'skip', we need to remove a few seconds from the end of the (old) buffer because 
-        # we want a 'skip' mix to be shorter than a normal mix between 2 tracks - both because we 
-        # are still in the middle of the old song, so the mix does not sound 'natural' - and because the 
-        # user probably wants to switch to the new track a.s.a.p. 
+        # In case of a requested 'skip', we need to remove a few seconds from the end of the (old) buffer because
+        # we want a 'skip' mix to be shorter than a normal mix between 2 tracks - both because we
+        # are still in the middle of the old song, so the mix does not sound 'natural' - and because the
+        # user probably wants to switch to the new track a.s.a.p.
         #
         # Also, fade out the old track.
         #
@@ -127,24 +126,24 @@ sub mix {
     }
     else {
         # In case the old track was very short (a few seconds, shorter than the current buffer we are trying to mix),
-        # there may still be audio from the previous old track in the buffer. 
-        # In this case, skip to the beginning of the current old track, and keep the 'skipped' samples in @skipped_buffer, 
+        # there may still be audio from the previous old track in the buffer.
+        # In this case, skip to the beginning of the current old track, and keep the 'skipped' samples in @skipped_buffer,
         # so we can re-add them to the beginning of the buffer after mixing is done.
         #
         # If we don't do this, this sequence:
         # old song -> very short jingle -> new song
         # Can result in the new song starting before the jingle.
-    
+
         my $to_skip = @$buffer - $self->{elapsed};
         push (@skipped_buffer, splice(@$buffer, 0, $to_skip) ) if $to_skip > 0;
-    }    
+    }
 
-    # Open the new track. We are not going to read from it yet, but opening it now may give the child process some time to start up. 
+    # Open the new track. We are not going to read from it yet, but opening it now may give the child process some time to start up.
     $self->{source} = $self->_do_get_new_source();
 
     # Find the index of the last sample that is 'audible' (loud enough to hear) in the remaining buffer of the old source.
     #
-    # The audio stream is a 'wave' expressed as a signed integer - so 0 is 'silence'. 
+    # The audio stream is a 'wave' expressed as a signed integer - so 0 is 'silence'.
     # Use abs() to compare samples with value < 0 with those > 0
     #
     my $last_audible_sample_index;
@@ -164,7 +163,7 @@ sub mix {
         $self->debug( "last audible sample index: $last_audible_sample_index of " . scalar( @$buffer ) );
 
         # remove everything after the 'last audible' sample from the remaining buffer of the old source
-        # in other words, remove silence at the end of the track. 
+        # in other words, remove silence at the end of the track.
         splice @$buffer, $last_audible_sample_index + 1
     }
     else {
@@ -172,7 +171,7 @@ sub mix {
         @$buffer = ();
     }
 
-    # We only want the mix to last normal_fade_seconds seconds. So skip the samples in the remaining old buffer that are too much. 
+    # We only want the mix to last normal_fade_seconds seconds. So skip the samples in the remaining old buffer that are too much.
     $self->debug("buffer size before sizing down:" . scalar(@$buffer));
     my $to_size_down = @$buffer - ($self->{normal_fade_seconds} * $self->{sample_rate});
     push(@skipped_buffer, splice(@$buffer, 0, $to_size_down) ) if $to_size_down > 0;
@@ -192,7 +191,7 @@ sub mix {
         }
     }
 
-    # Skip everything up to and including the last loud sample    
+    # Skip everything up to and including the last loud sample
     if (defined $last_loud_sample_index) {
         $self->debug( "last loud sample index: $last_loud_sample_index of " . scalar( @$buffer ) );
         push(@skipped_buffer, splice(@$buffer, 0, $last_loud_sample_index + 1));
@@ -202,13 +201,13 @@ sub mix {
     }
 
     # get as many samples from the new source as we have left from the old source,
-    # or in case of a very short new track, as many as possible. 
+    # or in case of a very short new track, as many as possible.
     my @new_buffer;
     $self->_get_samples(scalar @$buffer, \@new_buffer);
     $self->_make_mixable(\@new_buffer);
 
-    # If the new track is shorter than the remaining buffer of the old track 
-    # (so the new track is only a few seconds long), skip the extra samples in the old buffer. 
+    # If the new track is shorter than the remaining buffer of the old track
+    # (so the new track is only a few seconds long), skip the extra samples in the old buffer.
     # This prevents situations where we play a very short jingle and then hear another
     # few remaining seconds of the 'old' track.
     if (@$buffer > @new_buffer) {
@@ -229,7 +228,7 @@ sub mix {
             $self->debug( "mixing second $full_second..." );
         }
 
-        # Do the actual mix: simply add up the values of the samples of the old & new track. 
+        # Do the actual mix: simply add up the values of the samples of the old & new track.
         # Keep track of the loudest sample value per channel. We use it later on for volume adjustment.
 
         my $newsample = shift @new_buffer;
@@ -249,15 +248,15 @@ sub mix {
 
     # Volume adjustment
     #
-    # In case there are any samples in the "mixed buffer" that are louder than MAXINT, 
-    # lower the volume of the *whole* buffer just enough that it will stay within the limits. 
-    # To minimise audible impact, this happens for each channel separately. 
+    # In case there are any samples in the "mixed buffer" that are louder than MAXINT,
+    # lower the volume of the *whole* buffer just enough that it will stay within the limits.
+    # To minimise audible impact, this happens for each channel separately.
     #
-    # This is a bit of a naive approach - in theory this could lead to an audible drop in volume 
-    # just before mixing. In practice the audible impact seems to be minimal. 
+    # This is a bit of a naive approach - in theory this could lead to an audible drop in volume
+    # just before mixing. In practice the audible impact seems to be minimal.
     #
-    # We might be able to further improve this by doing the volume adjustment more gradually - but this seems complicated. 
-    # 
+    # We might be able to further improve this by doing the volume adjustment more gradually - but this seems complicated.
+    #
     foreach my $channel ( grep { $max[$_] > MAXINT } (0 .. $self->{channels_amount}-1) ) {
         $self->debug( "channel $channel needs volume adjustment" );
 
@@ -480,7 +479,7 @@ Amount of seconds that we want tracks to overlap. This is only the initial/max v
 
 =head2 buffer_length_seconds
 
-Amount of seconds of the current track to keep in the buffer. Having this set to a higher value than normal_fade_seconds will ensure that there will be enough audio left to mix after removing silence at the end of the old track. 
+Amount of seconds of the current track to keep in the buffer. Having this set to a higher value than normal_fade_seconds will ensure that there will be enough audio left to mix after removing silence at the end of the old track.
 
 =head2 skip_fade_seconds
 
@@ -505,7 +504,7 @@ Audio softer than this volume fraction at the end of a track (and within the buf
 
 =head2 debug
 
-Log debugging information. If the value is a code reference, the logs will be passed to that sub. Otherwise the value will be treated as a boolean. If true, logs will be printed to STDERR . 
+Log debugging information. If the value is a code reference, the logs will be passed to that sub. Otherwise the value will be treated as a boolean. If true, logs will be printed to STDERR .
 
 =head1 METHODS
 
@@ -534,3 +533,4 @@ Get the amount of played samples in the current track - this can be called from 
     print "now at position $elapsed_seconds of the current track\r";
 
 Get the amount of elapsed seconds in the current track - in other words the current position in the track. This equals to get_elapsed_samples/sample_rate .
+
