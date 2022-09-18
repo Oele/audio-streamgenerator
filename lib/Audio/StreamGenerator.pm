@@ -75,6 +75,7 @@ sub get_streamer {
     return sub {
         $eof = eof( $self->{source} ) unless defined $eof;
         if ( $eof || $self->{skip} ) {
+            $last_elapsed = 0;
             $eof = undef;
             $self->_mix();
         }
