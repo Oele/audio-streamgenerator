@@ -532,6 +532,30 @@ Log debugging information. If the value is a code reference, the logs will be pa
 
 Start the actual audio stream.
 
+=head2 get_streamer
+
+    my $streamer_sub = $streamer->get_streamer($sec_per_call);
+
+    while (1) {
+        $streamer_sub->();
+    }
+
+Get an anonymous subroutine that will produce C<$sec_per_call> seconds of a stream when called.
+
+C<$sec_per_call> is optional, and is by default C<1>.
+
+Use this method instead of L<stream> if you want to have more control over the streaming process, for example, running the streamer inside an event loop:
+
+    use Mojo::IOLoop;
+
+    my $loop = Mojo::IOLoop->singleton;
+    my $streamer_sub = $streamer->get_streamer(0.25);
+
+    $loop->recurring(0.1 => $streamer_sub);
+    $loop->start;
+
+Note: event loop will be blocked for up to 0.25 seconds every time the timer is done.
+
 =head2 skip
 
     $streamer->skip();
