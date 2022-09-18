@@ -61,7 +61,8 @@ sub new {
 }
 
 sub get_streamer {
-    my $self = shift;
+    my ($self, $batch_length_seconds) = @_;
+    my $batch_size = int(($batch_length_seconds || 1) * $self->{sample_rate});
 
     $self->debug( "starting stream" );
 
@@ -69,6 +70,7 @@ sub get_streamer {
     $self->{buffer} = [];
     $self->{skip}   = 0;
     my $eof = undef;
+    my $last_elapsed = 0;
 
     return sub {
         $eof = eof( $self->{source} ) unless defined $eof;
@@ -81,11 +83,18 @@ sub get_streamer {
         my $diff = @{ $self->{buffer} } - $needed;
 
         if ($diff < 0) {
-            $eof = 1 unless $self->_get_samples($self->{sample_rate}, $self->{buffer});
+            $eof = 1 unless $self->_get_samples($batch_size, $self->{buffer});
         }
         else {
-            $self->_send_samples($self->{sample_rate});
-            $self->{run_every_second}($self) if defined $self->{run_every_second};
+            $self->_send_samples($batch_size);
+
+            if (defined $self->{run_every_second}) {
+                my $current_elapsed = int( $self->get_elapsed_seconds );
+                if ($current_elapsed > $last_elapsed) {
+                    $self->{run_every_second}($self);
+                    $last_elapsed = $current_elapsed;
+                }
+            }
         }
     };
 }
