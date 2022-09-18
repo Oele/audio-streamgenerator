@@ -129,7 +129,7 @@ Amount of seconds that we want tracks to overlap. This is only the initial/max v
 
 ## buffer\_length\_seconds
 
-Amount of seconds of the current track to keep in the buffer. Having this set to a higher value than normal\_fade\_seconds will ensure that there will be enough audio left to mix after removing silence at the end of the old track. 
+Amount of seconds of the current track to keep in the buffer. Having this set to a higher value than normal\_fade\_seconds will ensure that there will be enough audio left to mix after removing silence at the end of the old track.
 
 ## skip\_fade\_seconds
 
@@ -154,7 +154,7 @@ Audio softer than this volume fraction at the end of a track (and within the buf
 
 ## debug
 
-Log debugging information. If the value is a code reference, the logs will be passed to that sub. Otherwise the value will be treated as a boolean. If true, logs will be printed to STDERR . 
+Log debugging information. If the value is a code reference, the logs will be passed to that sub. Otherwise the value will be treated as a boolean. If true, logs will be printed to STDERR .
 
 # METHODS
 
@@ -165,6 +165,34 @@ $streamer->stream();
 ```
 
 Start the actual audio stream.
+
+## get\_streamer
+
+```perl
+my $streamer_sub = $streamer->get_streamer($sec_per_call);
+
+while (1) {
+    $streamer_sub->();
+}
+```
+
+Get an anonymous subroutine that will produce `$sec_per_call` seconds of a stream when called.
+
+`$sec_per_call` is optional, and is by default `1`.
+
+Use this method instead of [stream](https://metacpan.org/pod/stream) if you want to have more control over the streaming process, for example, running the streamer inside an event loop:
+
+```perl
+use Mojo::IOLoop;
+
+my $loop = Mojo::IOLoop->singleton;
+my $streamer_sub = $streamer->get_streamer(0.25);
+
+$loop->recurring(0.1 => $streamer_sub);
+$loop->start;
+```
+
+Note: event loop will be blocked for up to 0.25 seconds every time the timer is done.
 
 ## skip
 
