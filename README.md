@@ -14,5 +14,5 @@ coding style of the module. Let me know if you plan something
 bigger so we can talk it through.
 
 ### Authors
-Sander Plas <oele@cpan.org>
-Bartosz Jarzyna <bbrtj.pro@gmail.com>
+- Sander Plas <oele@cpan.org>
+- Bartosz Jarzyna <bbrtj.pro@gmail.com>
