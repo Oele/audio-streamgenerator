@@ -5,9 +5,12 @@ WriteMakefile(
   NAME             => 'Audio::StreamGenerator',
   VERSION_FROM     => 'lib/Audio/StreamGenerator.pm',
   ABSTRACT_FROM    => 'lib/Audio/StreamGenerator.pm',
-  AUTHOR           => 'Sander Plas',
+  AUTHOR           => [
+    'Sander Plas <oele@cpan.org>',
+    'Bartosz Jarzyna <bbrtj.pro@gmail.com>'
+  ],
   LICENSE          => 'freebsd',
-  MIN_PERL_VERSION => '5.008004',
+  MIN_PERL_VERSION => '5.010',
   PREREQ_PM        => {
     'strict'   => 0,
     'warnings' => 0

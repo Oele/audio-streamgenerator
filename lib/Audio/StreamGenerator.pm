@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use Carp;
 
-our $VERSION = 0.06;
+our $VERSION = 1.00;
 
 use constant {
     MAXINT => 32767
