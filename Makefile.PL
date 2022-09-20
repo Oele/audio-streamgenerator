@@ -10,7 +10,7 @@ WriteMakefile(
     'Bartosz Jarzyna <bbrtj.pro@gmail.com>'
   ],
   LICENSE          => 'freebsd',
-  MIN_PERL_VERSION => '5.008004',
+  MIN_PERL_VERSION => '5.010',
   PREREQ_PM        => {
     'strict'   => 0,
     'warnings' => 0
