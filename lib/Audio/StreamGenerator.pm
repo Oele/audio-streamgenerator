@@ -226,6 +226,7 @@ sub _mix {
     }
 
     my @max   = (0) x $self->{channels_amount};
+    my $first_loud_sample_index;
     my $index = -1;
 
     # Loop over the remaining samples in the buffer of the old source
@@ -239,7 +240,9 @@ sub _mix {
         }
 
         # Do the actual mix: simply add up the values of the samples of the old & new track.
-        # Keep track of the loudest sample value per channel. We use it later on for volume adjustment.
+        # Keep track of the first sample of which the resulting value is too loud (> MAXINT)
+        # and of the loudest sample value per channel.
+        # We use these values later on for volume adjustment.
 
         my $newsample = shift @new_buffer;
         foreach my $channel (0 .. $self->{channels_amount} - 1) {
@@ -248,34 +251,73 @@ sub _mix {
             if ( $value > $max[$channel] ) {
                 $max[$channel] = $value;
             }
+            if (!defined $first_loud_sample_index && $value > MAXINT) {
+                $first_loud_sample_index = $index;
+            }
         }
     }
 
     $self->debug( "done mixing" );
     croak "unused samples left in the buffer of the new track after mixing - this should never happen!" if @new_buffer;
 
-    # re-add the samples we may have skipped before mixing to the beginning of the buffer.
-    unshift( @$buffer, @skipped_buffer );
+    # The next step will be volume adjustment, so skip everything up to (excluding) the first loud sample.
+
+    my $to_skip = $first_loud_sample_index // @$buffer;
+    $self->debug("skipping $to_skip non-loud samples out of " . scalar(@$buffer) );
+
+    push @skipped_buffer, splice(@$buffer, 0, $to_skip);
 
     # Volume adjustment
     #
-    # In case there are any samples in the "mixed buffer" that are louder than MAXINT,
-    # lower the volume of the *whole* buffer just enough that it will stay within the limits.
-    # To minimise audible impact, this happens for each channel separately.
+    # Because we have added up samples from two sources, the value of some of them might be higher than MAXINT.
+    # This will cause distortion once we try to convert our buffer back to PCM audio.
+    # So, we need to adjust the volume of the audio just enough for it to stay within the limits.
     #
-    # This is a bit of a naive approach - in theory this could lead to an audible drop in volume
-    # just before mixing. In practice the audible impact seems to be minimal.
+    # Because of the last 'skip' of non-loud samples, the @skipped_buffer now only has samples that are safe / don't really
+    # need volume adjustment, and @$buffer starts with the first sample that is too loud if we don't adjust the volume.
     #
-    # We might be able to further improve this by doing the volume adjustment more gradually - but this seems complicated.
+    # We only run the volume adjustment logic on channels that actually need it.
     #
-    foreach my $channel ( grep { $max[$_] > MAXINT } (0 .. $self->{channels_amount} - 1) ) {
-        $self->debug( "channel $channel needs volume adjustment" );
+    # Strategy: gradually lower the volume on the @skipped_buffer, so that we are at the right volume once we get to the
+    # first loud sample at the beginning of @$buffer.
+    #
+    # This approach should minimise audible volume drops because of the volume adjustment.
+    # A larger buffer size will result in smoother transitions.
 
+    foreach my $channel ( grep { $max[$_] > MAXINT } (0 .. $self->{channels_amount} - 1) ) {
+
+        # Calculate what is the fraction we need to multiply the samples in @$buffer with to ensure 
+        # that the loudest sample will not be highter than MAXINT
+        my $dst_fraction = MAXINT / $max[$channel];
+
+        # Calculate the difference between the starting situation (1 / 100%) and the fraction we have to work towards
+        my $fraction_diff = 1 - $dst_fraction;
+        # Calculate how much change per sample in @skipped_buffer is necessary to make a smooth/gradual (linear) volume change
+        my $fraction_diff_per_sample = $fraction_diff / @skipped_buffer;
+
+        $self->debug( "channel $channel needs volume adjustment. dst_fraction is $dst_fraction ; fraction_diff is $fraction_diff ;" .
+            " skipped samples " . scalar(@skipped_buffer) . "; fraction_diff_per_sample $fraction_diff_per_sample" );
+
+        # Gradually change the volume of the @skipped_buffer towards the volume we need
+        my $current_fraction = 1;
+        foreach my $sample ( @skipped_buffer ) {
+            $current_fraction -= $fraction_diff_per_sample;
+            $sample->[$channel] = $sample->[$channel] * $current_fraction
+        }
+
+        # $current_fraction and $dst_fraction should now be very close to each other (there is some rounding difference)
+        $self->debug("current_fraction after processing skipped_buffer: $current_fraction ; dst_fraction: $dst_fraction");
+
+        # adjust the volume of the remaining buffer (everything from the first loud sample onwards) by multiplying it with the dst_fraction.
         foreach my $sample ( @$buffer ) {
-            $sample->[$channel] =
-                ( $sample->[$channel] / $max[$channel] ) * MAXINT;
+            $sample->[$channel] = $sample->[$channel] * $dst_fraction
         }
     }
+
+    # Re-add all the samples that we have 'skipped' through the whole mixing process, to the beginning of the buffer.
+
+    unshift( @$buffer, @skipped_buffer );
+
 }
 
 sub _make_mixable {
