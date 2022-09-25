@@ -302,7 +302,7 @@ sub _mix {
         my $current_fraction = 1;
         foreach my $sample ( @skipped_buffer ) {
             $current_fraction -= $fraction_diff_per_sample;
-            $sample->[$channel] = $sample->[$channel] * $current_fraction
+            $sample->[$channel] *= $current_fraction
         }
 
         # $current_fraction and $dst_fraction should now be very close to each other (there is some rounding difference)
@@ -310,7 +310,7 @@ sub _mix {
 
         # adjust the volume of the remaining buffer (everything from the first loud sample onwards) by multiplying it with the dst_fraction.
         foreach my $sample ( @$buffer ) {
-            $sample->[$channel] = $sample->[$channel] * $dst_fraction
+            $sample->[$channel] *= $dst_fraction
         }
     }
 
