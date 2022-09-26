@@ -105,6 +105,8 @@ sub _mix {
 
     my $buffer = $self->{buffer};
 
+    my $max_channel_index = $self->{channels_amount} - 1;
+
     # We're done with the old source
     close( $self->{source} );
 
@@ -128,7 +130,7 @@ sub _mix {
         foreach my $sample (@$buffer) {
             my $togo = @$buffer - $index;
             my $fraction = $togo / @$buffer;
-            for my $channel (0 .. @$sample - 1) {
+            for my $channel (0 .. $#$sample) {
                 $sample->[$channel] *= $fraction;
             }
             $index++;
@@ -159,9 +161,9 @@ sub _mix {
     my $last_audible_sample_index;
     my $audible_threshold      = MAXINT * $self->{min_audible_vol_fraction};
 
-    FIND_LAST_AUDIBLE: foreach my $index (reverse 0 .. @$buffer - 1) {
+    FIND_LAST_AUDIBLE: foreach my $index (reverse 0 .. $#$buffer) {
         my $sample = $buffer->[$index];
-        foreach my $channel(0 .. $self->{channels_amount} - 1) {
+        foreach my $channel(0 .. $max_channel_index) {
             if (abs($sample->[$channel]) >= $audible_threshold) {
                 $last_audible_sample_index = $index;
                 last FIND_LAST_AUDIBLE;
@@ -191,9 +193,9 @@ sub _mix {
     # Find the index of the last sample that is 'loud' (too loud to mix) in the remaining buffer of the old source.
     my $last_loud_sample_index;
     my $loud_threshold         = MAXINT * $self->{max_vol_before_mix_fraction};
-    FIND_LAST_LOUD: foreach my $index (reverse 0 .. @$buffer - 1) {
+    FIND_LAST_LOUD: foreach my $index (reverse 0 .. $#$buffer) {
         my $sample = $buffer->[$index];
-        foreach my $channel (0 .. $self->{channels_amount} - 1) {
+        foreach my $channel (0 .. $max_channel_index) {
             if ( abs($sample->[$channel]) >= $loud_threshold ) {
                 $last_loud_sample_index = $index;
                 last FIND_LAST_LOUD;
@@ -245,7 +247,7 @@ sub _mix {
         # We use these values later on for volume adjustment.
 
         my $newsample = shift @new_buffer;
-        foreach my $channel (0 .. $self->{channels_amount} - 1) {
+        foreach my $channel (0 .. $max_channel_index) {
             $sample->[$channel] += $newsample->[$channel];
             my $value = abs($sample->[$channel]);
             if ( $value > $max[$channel] ) {
@@ -284,7 +286,7 @@ sub _mix {
     # This approach should minimise audible volume drops because of the volume adjustment.
     # A larger buffer size will result in smoother transitions.
 
-    foreach my $channel ( grep { $max[$_] > MAXINT } (0 .. $self->{channels_amount} - 1) ) {
+    foreach my $channel ( grep { $max[$_] > MAXINT } (0 .. $max_channel_index) ) {
 
         # Calculate what is the fraction we need to multiply the samples in @$buffer with to ensure 
         # that the loudest sample will not be highter than MAXINT
