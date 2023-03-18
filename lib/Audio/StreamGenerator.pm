@@ -10,7 +10,7 @@ use constant {
     MAXINT => 32767
 };
 
-sub debug {
+sub _debug {
     my ($self, $message) = @_;
     return unless $self->{debug};
     if (ref $self->{debug} eq 'CODE') {
@@ -65,7 +65,7 @@ sub get_streamer {
     my ($self, $batch_length_seconds) = @_;
     my $batch_size = int(($batch_length_seconds || 1) * $self->{sample_rate});
 
-    $self->debug( "starting stream" );
+    $self->_debug( "starting stream" );
 
     $self->{source} = $self->_do_get_new_source();
     $self->{buffer} = [];
@@ -124,7 +124,7 @@ sub _mix {
         # Also, fade out the old track.
         #
         $self->{skip} = 0;
-        $self->debug( "shortening buffer for skip..." . scalar(@$buffer) );
+        $self->_debug( "shortening buffer for skip..." . scalar(@$buffer) );
         splice @$buffer, ( $self->{skip_fade_seconds} * $self->{sample_rate} );
 
         my $index = 0;
@@ -175,23 +175,23 @@ sub _mix {
         }
 
         if (defined $last_audible_sample_index) {
-            $self->debug( "last audible sample index: $last_audible_sample_index of " . scalar( @$buffer ) );
+            $self->_debug( "last audible sample index: $last_audible_sample_index of " . scalar( @$buffer ) );
 
             # remove everything after the 'last audible' sample from the remaining buffer of the old source
             # in other words, remove silence at the end of the track.
             splice @$buffer, $last_audible_sample_index + 1
         }
         else {
-            $self->debug( "no audible samples in buffer?! - buffer size is " . scalar(@$buffer));
+            $self->_debug( "no audible samples in buffer?! - buffer size is " . scalar(@$buffer));
             @$buffer = ();
         }
     }
 
     # We only want the mix to last normal_fade_seconds seconds. So skip the samples in the remaining old buffer that are too much.
-    $self->debug("buffer size before sizing down:" . scalar(@$buffer));
+    $self->_debug("buffer size before sizing down:" . scalar(@$buffer));
     my $to_size_down = @$buffer - ($self->{normal_fade_seconds} * $self->{sample_rate});
     push(@skipped_buffer, splice(@$buffer, 0, $to_size_down) ) if $to_size_down > 0;
-    $self->debug("buffer size after sizing down:". scalar(@$buffer));
+    $self->_debug("buffer size after sizing down:". scalar(@$buffer));
 
 
     # Find the index of the last sample that is 'loud' (too loud to mix) in the remaining buffer of the old source.
@@ -209,11 +209,11 @@ sub _mix {
 
     # Skip everything up to and including the last loud sample
     if (defined $last_loud_sample_index) {
-        $self->debug( "last loud sample index: $last_loud_sample_index of " . scalar( @$buffer ) );
+        $self->_debug( "last loud sample index: $last_loud_sample_index of " . scalar( @$buffer ) );
         push(@skipped_buffer, splice(@$buffer, 0, $last_loud_sample_index + 1));
     }
     else {
-        $self->debug( "no loud samples in the old track");
+        $self->_debug( "no loud samples in the old track");
     }
 
     my @new_buffer;
@@ -230,12 +230,12 @@ sub _mix {
 
         my $samples_to_get = @$buffer - @new_buffer;
 
-        $self->debug( "reading from new buffer, read $new_buffer_read_count ; need $samples_to_get samples" );
+        $self->_debug( "reading from new buffer, read $new_buffer_read_count ; need $samples_to_get samples" );
 
         my $len = $self->_get_samples( $samples_to_get, \@new_buffer );
 
         if (!$len) {
-            $self->debug( "zero samples received from new source" );
+            $self->_debug( "zero samples received from new source" );
             last
         }
 
@@ -255,11 +255,11 @@ sub _mix {
             }
 
             if (!defined $first_audible_sample_index) {
-                $self->debug( "no audible samples in new buffer" );
+                $self->_debug( "no audible samples in new buffer" );
                 @new_buffer = ();
             }
             else {
-                $self->debug( "first audible sample index in new buffer: $first_audible_sample_index" );
+                $self->_debug( "first audible sample index in new buffer: $first_audible_sample_index" );
                 splice @new_buffer, 0, $first_audible_sample_index
             }
         }
@@ -287,7 +287,7 @@ sub _mix {
         # only log at full seconds - don't flood the log
         if ( defined $self->{debug} && !( $index % $self->{sample_rate} ) ) {
             my $full_second = $index / $self->{sample_rate};
-            $self->debug( "mixing second $full_second..." );
+            $self->_debug( "mixing second $full_second..." );
         }
 
         # Do the actual mix: simply add up the values of the samples of the old & new track.
@@ -308,13 +308,13 @@ sub _mix {
         }
     }
 
-    $self->debug( "done mixing" );
+    $self->_debug( "done mixing" );
     croak "unused samples left in the buffer of the new track after mixing - this should never happen!" if @new_buffer;
 
     # The next step will be volume adjustment, so skip everything up to (excluding) the first loud sample.
 
     my $to_skip = $first_loud_sample_index // @$buffer;
-    $self->debug("skipping $to_skip non-loud samples out of " . scalar(@$buffer) );
+    $self->_debug("skipping $to_skip non-loud samples out of " . scalar(@$buffer) );
 
     push @skipped_buffer, splice(@$buffer, 0, $to_skip);
 
@@ -346,7 +346,7 @@ sub _mix {
         # Calculate how much change per sample in @skipped_buffer is necessary to make a smooth/gradual (linear) volume change
         my $fraction_diff_per_sample = $fraction_diff / @skipped_buffer;
 
-        $self->debug( "channel $channel needs volume adjustment. dst_fraction is $dst_fraction ; fraction_diff is $fraction_diff ;" .
+        $self->_debug( "channel $channel needs volume adjustment. dst_fraction is $dst_fraction ; fraction_diff is $fraction_diff ;" .
             " skipped samples " . scalar(@skipped_buffer) . "; fraction_diff_per_sample $fraction_diff_per_sample" );
 
         # Gradually change the volume of the @skipped_buffer towards the volume we need
@@ -357,7 +357,7 @@ sub _mix {
         }
 
         # $current_fraction and $dst_fraction should now be very close to each other (there is some rounding difference)
-        $self->debug("current_fraction after processing skipped_buffer: $current_fraction ; dst_fraction: $dst_fraction");
+        $self->_debug("current_fraction after processing skipped_buffer: $current_fraction ; dst_fraction: $dst_fraction");
 
         # adjust the volume of the remaining buffer (everything from the first loud sample onwards) by multiplying it with the dst_fraction.
         foreach my $sample ( @$buffer ) {
