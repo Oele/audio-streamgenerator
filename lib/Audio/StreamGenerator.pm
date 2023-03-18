@@ -611,7 +611,7 @@ If enabled, audio softer than L</"min_audible_vol_fraction"> at the beginning of
 
 =head2 min_audible_vol_fraction
 
-Audio softer than this volume fraction at the end of a track (and within the buffer) will be skipped, if skip_silence is enabled.
+Audio softer than this volume fraction at the end of a track (and within the buffer) or at the beginning of a track will be skipped, if skip_silence is enabled.
 
 =head2 debug
 
