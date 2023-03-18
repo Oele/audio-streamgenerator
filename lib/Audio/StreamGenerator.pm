@@ -212,11 +212,54 @@ sub _mix {
         $self->debug( "no loud samples in the old track");
     }
 
-    # get as many samples from the new source as we have left from the old source,
-    # or in case of a very short new track, as many as possible.
     my @new_buffer;
-    $self->_get_samples(scalar @$buffer, \@new_buffer);
-    $self->_make_mixable(\@new_buffer);
+    my $new_buffer_read_count;
+
+    # Get as many samples from the new source as we have left from the old source,
+    # or in case of a very short new track, as many as possible.
+
+    # In case any silence is detected at the beginning of the new track, it is removed. 
+    # If that happens, we need another read to get the desired amount of samples in the new buffer - hence the while loop here. 
+
+    while ( @new_buffer < @$buffer ) {
+        $new_buffer_read_count++;
+
+        my $samples_to_get = @$buffer - @new_buffer;
+
+        $self->debug( "reading from new buffer, read $new_buffer_read_count ; need $samples_to_get samples" );
+
+        my $len = $self->_get_samples( $samples_to_get, \@new_buffer );
+
+        if (!$len) {
+            $self->debug( "zero samples received from new source" );
+            last
+        }
+
+        $self->_make_mixable(\@new_buffer);
+
+        # Find the first 'audible' sample, so we can remove any silence at the start of the new track.
+        my $first_audible_sample_index;
+        FIND_FIRST_AUDIBLE: foreach my $index (0 .. $#new_buffer) {
+            my $sample = $new_buffer[$index];
+            foreach my $channel(0 .. $max_channel_index) {
+                if (abs($sample->[$channel]) >= $audible_threshold) {
+                    $first_audible_sample_index = $index;
+                    last FIND_FIRST_AUDIBLE;
+                }
+            }
+        }
+
+        if (!defined $first_audible_sample_index) {
+            $self->debug( "no audible samples in new buffer" );
+            @new_buffer = ();
+        }
+        else {
+            $self->debug( "first audible sample index in new buffer: $first_audible_sample_index" );
+            splice @new_buffer, 0, $first_audible_sample_index
+        }
+
+    }
+
 
     # If the new track is shorter than the remaining buffer of the old track
     # (so the new track is only a few seconds long), skip the extra samples in the old buffer.
