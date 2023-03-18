@@ -48,14 +48,8 @@ sub new {
     my %key_lookup = map { $_ => 1 } ( @mandatory_keys, keys %self );
 
     foreach my $key ( keys %args ) {
-        croak "unknown argument '$key'"
-            if !defined( $key_lookup{$key} );
-    }
-
-    foreach my $key (keys %key_lookup) {
-        if (exists $args{$key}) {
-            $self{$key} = $args{$key}
-        }
+        croak "unknown argument '$key'" if !defined( $key_lookup{$key} );
+        $self{$key} = $args{$key}
     }
 
     bless \%self, $class;
