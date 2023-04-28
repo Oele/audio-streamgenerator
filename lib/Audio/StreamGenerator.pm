@@ -216,8 +216,8 @@ sub _mix {
     # Get as many samples from the new source as we have left from the old source,
     # or in case of a very short new track, as many as possible.
 
-    # In case any silence is detected at the beginning of the new track, it is removed. 
-    # If that happens, we need another read to get the desired amount of samples in the new buffer - hence the while loop here. 
+    # In case any silence is detected at the beginning of the new track, it is removed.
+    # If that happens, we need another read to get the desired amount of samples in the new buffer - hence the while loop here.
 
     while ( @new_buffer < @$buffer ) {
         $new_buffer_read_count++;
@@ -331,7 +331,7 @@ sub _mix {
 
     foreach my $channel ( grep { $max[$_] > MAXINT } (0 .. $max_channel_index) ) {
 
-        # Calculate what is the fraction we need to multiply the samples in @$buffer with to ensure 
+        # Calculate what is the fraction we need to multiply the samples in @$buffer with to ensure
         # that the loudest sample will not be highter than MAXINT
         my $dst_fraction = MAXINT / $max[$channel];
 
@@ -607,7 +607,7 @@ When mixing 2 tracks, StreamGenerator needs to find out what the last loud sampl
 
 =head2 skip_silence
 
-If enabled, audio softer than L</"min_audible_vol_fraction"> at the beginning of a track, and at the end of tracks (but within the last L</"buffer_length_seconds"> seconds) will be skipped. 
+If enabled, audio softer than L</"min_audible_vol_fraction"> at the beginning of a track, and at the end of tracks (but within the last L</"buffer_length_seconds"> seconds) will be skipped.
 
 =head2 min_audible_vol_fraction
 
@@ -642,12 +642,12 @@ Use this method instead of L</"stream"> if you want to have more control over th
     use Mojo::IOLoop;
 
     my $loop = Mojo::IOLoop->singleton;
-    my $streamer_sub = $streamer->get_streamer(0.25);
+    my $streamer_sub = $streamer->get_streamer(0.5);
 
-    $loop->recurring(0.1 => $streamer_sub);
+    $loop->recurring(0.05 => $streamer_sub);
     $loop->start;
 
-Note: event loop will be blocked for up to 0.25 seconds every time the timer is done.
+Note: event loop will be blocked for up to 0.5 seconds every time the timer is done. The timer/streamer ratio should be sizeable enough for the loop to run smoothly, including the mixing process. This may vary depending on the speed of the machine which is used to generate the stream.
 
 =head2 skip
 
