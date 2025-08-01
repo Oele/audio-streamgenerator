@@ -61,7 +61,7 @@ sub get_streamer {
 
     $self->_debug( "starting stream" );
 
-    $self->{source} = $self->_do_get_new_source();
+    ($self->{source}, undef) = $self->_do_get_new_source();
     $self->{buffer} = [];
     $self->{skip}   = 0;
     my $eof = undef;
@@ -145,8 +145,12 @@ sub _mix {
         push (@skipped_buffer, splice(@$buffer, 0, $to_skip) ) if $to_skip > 0;
     }
 
+    my $fade_seconds;
+
     # Open the new track. We are not going to read from it yet, but opening it now may give the child process some time to start up.
-    $self->{source} = $self->_do_get_new_source();
+    ($self->{source}, $fade_seconds) = $self->_do_get_new_source();
+
+    $fade_seconds //= $self->{normal_fade_seconds};
 
     my $audible_threshold      = MAXINT * $self->{min_audible_vol_fraction};
 
@@ -183,7 +187,7 @@ sub _mix {
 
     # We only want the mix to last normal_fade_seconds seconds. So skip the samples in the remaining old buffer that are too much.
     $self->_debug("buffer size before sizing down:" . scalar(@$buffer));
-    my $to_size_down = @$buffer - ($self->{normal_fade_seconds} * $self->{sample_rate});
+    my $to_size_down = @$buffer - ($fade_seconds * $self->{sample_rate});
     push(@skipped_buffer, splice(@$buffer, 0, $to_size_down) ) if $to_size_down > 0;
     $self->_debug("buffer size after sizing down:". scalar(@$buffer));
 
@@ -574,7 +578,7 @@ The L</"out_fh"> command is also the place where you could insert a sound proces
 
 =head2 get_new_source
 
-Reference to a sub that will be called every time that a new source (audio file) is needed. Needs to return a readable filehandle that will output signed 16-bit little-endian PCM audio.
+Reference to a sub that will be called every time that a new source (audio file) is needed. Needs to return a readable filehandle that will output signed 16-bit little-endian PCM audio. Optionally, an amount of seconds can be returned as a second return value, to override the L</"normal_fade_seconds"> setting when mixing *to* the new source. 
 
 =head2 run_every_second
 
@@ -582,7 +586,7 @@ This sub will be run after each second of playback, with the StreamGenerator obj
 
 =head2 normal_fade_seconds
 
-Amount of seconds that we want tracks to overlap. This is only the initial/max value - the mixing algorithm may decide to mix less seconds if the old track ends with loud samples.
+Amount of seconds that we want tracks to overlap. This is only the initial/max value - the mixing algorithm may decide to mix less seconds if the old track ends with loud samples. It can be overriden for individual sources by returning an amount of seconds as a second return value from L</"get_new_source">. 
 
 =head2 buffer_length_seconds
 
